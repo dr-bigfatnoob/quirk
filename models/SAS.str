@@ -1,0 +1,264 @@
+Model SAS;
+Samples 1000;
+
+Max ENB = EV(NB);
+
+DM LF = GPS, radio_triangulation;
+DM FS = OpenIntent, In_house;
+DM RS = Explicit, Implicit;
+DM CP = XMPP_Open_Fire, In_house;
+DM MA = On_Demand_Google, Cache_on_server, Preloaded_ESRI;
+DM HP = Nexus_I_HTC, Droid_Motorola;
+DM CC = Wifi, 3G_on_Nexus_I, 3G_on_Droid, Bluetooth;
+DM DB = MySQL, sqLite;
+DM AP = Peer_to_peer, Client_Server, Push_based;
+DM DF = XML, Compressed_XML, Unformatted_data;
+
+
+NB = (BatteryUsage_weight * BatteryUsage_Preference) +
+     (ResponseTime_weight * ResponseTime_Preference) +
+     (Reliability_weight * Reliability_Preference) +
+     (RampUpTime_weight * RampUpTime_Preference) +
+     (Cost_weight * Cost_Preference) +
+     (DevelopmentTime_weight * DevelopmentTime_Preference) +
+     (DeploymentTime_weight * DeploymentTime_Preference);
+
+BatteryUsage_weight = 9;
+ResponseTime_weight = 7;
+Reliability_weight = 3;
+RampUpTime_weight = 2;
+Cost_weight = 1;
+DevelopmentTime_weight = 2;
+DeploymentTime_weight = 2;
+
+Min Risk = PROBABILITY(GoalFailure);
+GoalFailure = BatteryUsage_Failure
+                | ResponseTime_Failure
+                | Reliability_Failure
+                | RampUpTime_Failure
+                | Cost_Failure
+                | DevelopmentTime_Failure
+                | DeploymentTime_Failure;
+
+BatteryUsage_Preference = (BatteryUsage - BatteryUsage_best)
+							/(BatteryUsage_worst - BatteryUsage_best);
+
+BatteryUsage_Failure = BatteryUsage > BatteryUsage_must;
+
+BatteryUsage_best = 24;
+BatteryUsage_worst = 111;
+BatteryUsage_must = 52;
+
+BatteryUsage = BatteryUsage_LocationFinding + 
+               BatteryUsage_FileSharing + 
+               BatteryUsage_ReportSyncing + 
+               BatteryUsage_ChatProtocol + 
+               BatteryUsage_MapAccess + 
+               BatteryUsage_HardwarePlatform + 
+               BatteryUsage_Connectivity + 
+               BatteryUsage_DataBase + 
+               BatteryUsage_ArchitecturalPattern + 
+               BatteryUsage_DataExchangeFormat;
+
+Decision LF:BatteryUsage_LocationFinding = GPS:triangular(10, 10, 14), radio_triangulation:triangular(4, 5, 6);
+Decision FS:BatteryUsage_FileSharing = OpenIntent:triangular(5, 5, 6), In_house:0;
+Decision RS:BatteryUsage_ReportSyncing = Explicit:triangular(1, 3, 4), Implicit:triangular(7, 8, 10);
+Decision CP:BatteryUsage_ChatProtocol = XMPP_Open_Fire:triangular(4, 5, 6), In_house:triangular(2, 3, 12);
+Decision MA:BatteryUsage_MapAccess = On_Demand_Google:triangular(4, 4, 12), Cache_on_server:triangular(4, 5, 12), Preloaded_ESRI:triangular(5, 7, 7);
+Decision HP:BatteryUsage_HardwarePlatform = Nexus_I_HTC:triangular(3, 5, 5), Droid_Motorola:triangular(4, 5, 14);
+Decision CC:BatteryUsage_Connectivity = Wifi:triangular(3, 4, 5), 3G_on_Nexus_I:triangular(1, 2, 3), 3G_on_Droid:triangular(2, 4, 5), Bluetooth:triangular(2, 3, 15);
+Decision DB:BatteryUsage_DataBase = MySQL:triangular(3, 6, 7), sqLite:triangular(5, 5, 10);
+Decision AP:BatteryUsage_ArchitecturalPattern = Peer_to_peer:triangular(7, 8, 10), Client_Server:triangular(5, 6, 7), Push_based:triangular(2, 4, 4);
+Decision DF:BatteryUsage_DataExchangeFormat = XML:triangular(3, 4, 6), Compressed_XML:triangular(5, 5, 7), Unformatted_data:triangular(1, 1, 3);
+
+# Response Time
+
+ResponseTime_Preference = (ResponseTime - ResponseTime_worst)
+							/(ResponseTime_best - ResponseTime_worst);
+
+ResponseTime_Failure = 	ResponseTime > ResponseTime_must;
+
+ResponseTime_best = 203;
+ResponseTime_worst = 2850;
+ResponseTime_must = 882;
+
+ResponseTime = ResponseTime_LocationFinding + 
+               ResponseTime_FileSharing + 
+               ResponseTime_ReportSyncing + 
+               ResponseTime_ChatProtocol + 
+               ResponseTime_MapAccess + 
+               ResponseTime_HardwarePlatform + 
+               ResponseTime_Connectivity + 
+               ResponseTime_DataBase + 
+               ResponseTime_ArchitecturalPattern + 
+               ResponseTime_DataExchangeFormat;
+
+Decision LF:ResponseTime_LocationFinding = GPS:triangular(480, 500, 990), radio_triangulation:triangular(50, 100, 600);
+Decision FS:ResponseTime_FileSharing =  OpenIntent:triangular(50, 65, 70), In_house:triangular(40, 60, 100);
+Decision RS:ResponseTime_ReportSyncing = Explicit:triangular(20, 30, 50), Implicit:triangular(1, 4, 10);
+Decision CP:ResponseTime_ChatProtocol =  XMPP_Open_Fire:triangular(40, 60, 70), In_house:triangular(30, 40, 200);
+Decision MA:ResponseTime_MapAccess =  On_Demand_Google:triangular(700, 800, 900), Cache_on_server:triangular(1, 4, 500), Preloaded_ESRI:triangular(1, 2, 3);
+Decision HP:ResponseTime_HardwarePlatform =  Nexus_I_HTC:triangular(40, 60, 65), Droid_Motorola:triangular(50, 55, 200);
+Decision CC:ResponseTime_Connectivity =  Wifi:triangular(30, 35, 40), 3G_on_Nexus_I:triangular(20, 25, 40), 3G_on_Droid:triangular(20, 25, 40), Bluetooth:triangular(25, 30, 200);
+Decision DB:ResponseTime_DataBase =  MySQL:triangular(20, 25, 30), sqLite:triangular(8, 10, 50);
+Decision AP:ResponseTime_ArchitecturalPattern = Peer_to_peer:triangular(10, 20, 30), Client_Server:triangular(25, 30, 80), Push_based:triangular(15, 25, 40);
+Decision DF:ResponseTime_DataExchangeFormat = XML:triangular(20, 35, 80), Compressed_XML:triangular(12, 20, 35), Unformatted_data:triangular(3, 10, 15);
+
+# Reliability
+
+Reliability_Preference = (Reliability - Reliability_worst)
+							/(Reliability_best - Reliability_worst);
+
+Reliability_Failure = 	Reliability < Reliability_must;
+
+Reliability_best = 792;
+Reliability_worst = 535;
+Reliability_must = 721;
+
+Reliability = Reliability_LocationFinding + 
+               Reliability_FileSharing + 
+               Reliability_ReportSyncing + 
+               Reliability_ChatProtocol + 
+               Reliability_MapAccess + 
+               Reliability_HardwarePlatform + 
+               Reliability_Connectivity + 
+               Reliability_DataBase + 
+               Reliability_ArchitecturalPattern + 
+               Reliability_DataExchangeFormat;
+
+Decision LF:Reliability_LocationFinding = GPS:triangular(60, 75, 80), radio_triangulation:triangular(90, 92, 99);
+Decision FS:Reliability_FileSharing = OpenIntent:triangular(90, 95, 99), In_house:triangular(80, 92, 96);
+Decision RS:Reliability_ReportSyncing = Explicit:triangular(85, 88, 90), Implicit:triangular(30, 40, 200);
+Decision CP:Reliability_ChatProtocol = XMPP_Open_Fire:triangular(94, 95, 99), In_house:triangular(60, 96, 97);
+Decision MA:Reliability_MapAccess = On_Demand_Google:triangular(70, 91, 92), Cache_on_server:triangular(85, 97, 98), Preloaded_ESRI:triangular(85, 90, 99);
+Decision HP:Reliability_HardwarePlatform = Nexus_I_HTC:0, Droid_Motorola:0;
+Decision CC:Reliability_Connectivity = Wifi:triangular(80, 85, 90), 3G_on_Nexus_I:triangular(80, 88, 99), 3G_on_Droid:triangular(80, 88, 99), Bluetooth:triangular(50, 85, 85);
+Decision DB:Reliability_DataBase = MySQL:triangular(85, 90, 99), sqLite:triangular(70, 90, 95);
+Decision AP:Reliability_ArchitecturalPattern = Peer_to_peer:triangular(60, 66, 70), Client_Server:triangular(85, 95, 97), Push_based:triangular(90, 94, 99);
+Decision DF:Reliability_DataExchangeFormat = XML:0, Compressed_XML:0, Unformatted_data:0;
+
+# Ramp Up Time Model
+
+RampUpTime_Preference = (RampUpTime - RampUpTime_worst)
+							/(RampUpTime_best - RampUpTime_worst);
+
+RampUpTime_Failure = 	RampUpTime > RampUpTime_must;
+
+RampUpTime_best = 31;
+RampUpTime_worst = 83;
+RampUpTime_must = 58;
+
+RampUpTime = RampUpTime_LocationFinding + 
+               RampUpTime_FileSharing + 
+               RampUpTime_ReportSyncing + 
+               RampUpTime_ChatProtocol + 
+               RampUpTime_MapAccess + 
+               RampUpTime_HardwarePlatform + 
+               RampUpTime_Connectivity + 
+               RampUpTime_DataBase + 
+               RampUpTime_ArchitecturalPattern + 
+               RampUpTime_DataExchangeFormat;
+
+Decision LF:RampUpTime_LocationFinding = GPS:triangular(5, 6, 7), radio_triangulation:triangular(7, 8, 9);
+Decision FS:RampUpTime_FileSharing = OpenIntent:triangular(8, 9, 10), In_house:triangular(5, 8, 12);
+Decision RS:RampUpTime_ReportSyncing = Explicit:triangular(2, 2, 3), Implicit:triangular(1, 2, 2);
+Decision CP:RampUpTime_ChatProtocol = XMPP_Open_Fire:triangular(5, 6, 7), In_house:triangular(3, 4, 14);
+Decision MA:RampUpTime_MapAccess = On_Demand_Google:triangular(7, 9, 10), Cache_on_server:triangular(7, 9, 10), Preloaded_ESRI:triangular(10, 13, 14);
+Decision HP:RampUpTime_HardwarePlatform = Nexus_I_HTC:0, Droid_Motorola:0;
+Decision CC:RampUpTime_Connectivity = Wifi:triangular(1, 3, 4), 3G_on_Nexus_I:triangular(1, 2, 3), 3G_on_Droid:triangular(1, 2, 3), Bluetooth:triangular(1, 2, 8);
+Decision DB:RampUpTime_DataBase = MySQL:triangular(1, 2, 3), sqLite:triangular(3, 4, 5);
+Decision AP:RampUpTime_ArchitecturalPattern = Peer_to_peer:triangular(10, 11, 13), Client_Server:triangular(7, 8, 10), Push_based:triangular(9, 10, 12);
+Decision DF:RampUpTime_DataExchangeFormat = XML:triangular(2, 3, 4), Compressed_XML:triangular(4, 5, 6), Unformatted_data:triangular(1, 2, 3);
+
+
+# Cost Model
+
+Cost_Preference = (Cost - Cost_worst)
+							/(Cost_best - Cost_worst);
+Cost_Failure = 	Cost > Cost_must;
+
+Cost_best = 550;
+Cost_worst = 2250;
+Cost_must = 1290;
+
+Cost = Cost_LocationFinding + 
+               Cost_FileSharing + 
+               Cost_ReportSyncing + 
+               Cost_ChatProtocol + 
+               Cost_MapAccess + 
+               Cost_HardwarePlatform + 
+               Cost_Connectivity + 
+               Cost_DataBase + 
+               Cost_ArchitecturalPattern + 
+               Cost_DataExchangeFormat;
+
+Decision LF:Cost_LocationFinding = GPS:triangular(50, 80, 100), radio_triangulation:0;
+Decision FS:Cost_FileSharing = OpenIntent:0, In_house:0;
+Decision RS:Cost_ReportSyncing = Explicit:0, Implicit:0;
+Decision CP:Cost_ChatProtocol = XMPP_Open_Fire:0, In_house:0;
+Decision MA:Cost_MapAccess = On_Demand_Google:0, Cache_on_server:triangular(700, 900, 950), Preloaded_ESRI:triangular(100, 170, 200);
+Decision HP:Cost_HardwarePlatform = Nexus_I_HTC:triangular(500, 525, 530), Droid_Motorola:triangular(520, 520, 600);
+Decision CC:Cost_Connectivity = Wifi:triangular(70, 80, 85), 3G_on_Nexus_I:triangular(360, 400, 600), 3G_on_Droid:triangular(360, 400, 600), Bluetooth:triangular(50, 70, 200);
+Decision DB:Cost_DataBase = MySQL:0, sqLite:0;
+Decision AP:Cost_ArchitecturalPattern = Peer_to_peer:0, Client_Server:0, Push_based:0;
+Decision DF:Cost_DataExchangeFormat = XML:0, Compressed_XML:0, Unformatted_data:0;
+
+# Development Time Model
+
+DevelopmentTime_Preference = (DevelopmentTime - DevelopmentTime_worst)
+							/(DevelopmentTime_best - DevelopmentTime_worst);
+
+DevelopmentTime_Failure = 	DevelopmentTime > DevelopmentTime_must;
+
+DevelopmentTime_best = 61;
+DevelopmentTime_worst = 149;
+DevelopmentTime_must = 111;
+
+DevelopmentTime = DevelopmentTime_LocationFinding + 
+               DevelopmentTime_FileSharing + 
+               DevelopmentTime_ReportSyncing + 
+               DevelopmentTime_ChatProtocol + 
+               DevelopmentTime_MapAccess + 
+               DevelopmentTime_DataBase + 
+               DevelopmentTime_ArchitecturalPattern + 
+               DevelopmentTime_DataExchangeFormat;
+
+Decision LF:DevelopmentTime_LocationFinding = GPS:triangular(3, 4, 5), radio_triangulation:triangular(10, 14, 15);
+Decision FS:DevelopmentTime_FileSharing = OpenIntent:triangular(3, 4, 6), In_house:triangular(5, 6, 15);
+Decision RS:DevelopmentTime_ReportSyncing = Explicit:triangular(5, 6, 7), Implicit:triangular(3, 4, 4);
+Decision CP:DevelopmentTime_ChatProtocol = XMPP_Open_Fire:triangular(5, 6, 8), In_house:triangular(7, 8, 20);
+Decision MA:DevelopmentTime_MapAccess = On_Demand_Google:triangular(14, 18, 21), Cache_on_server:triangular(14, 18, 21), Preloaded_ESRI:triangular(20, 27, 30);
+Decision DB:DevelopmentTime_DataBase = MySQL:triangular(15, 17, 18), sqLite:triangular(15, 16, 22);
+Decision AP:DevelopmentTime_ArchitecturalPattern = Peer_to_peer:triangular(20, 26, 30), Client_Server:triangular(15, 16, 20), Push_based:triangular(20, 24, 25);
+Decision DF:DevelopmentTime_DataExchangeFormat = XML:triangular(6, 7, 8), Compressed_XML:triangular(7, 9, 10), Unformatted_data:triangular(3, 4, 5);
+
+
+# Deployment Time Model
+
+DeploymentTime_Preference = (DeploymentTime - DeploymentTime_worst)
+							/(DeploymentTime_best - DeploymentTime_worst);
+
+
+DeploymentTime_Failure = 	DeploymentTime > DeploymentTime_must;
+
+DeploymentTime_best = 21;
+DeploymentTime_worst = 72;
+DeploymentTime_must = 38;
+
+DeploymentTime = DeploymentTime_LocationFinding + 
+               DeploymentTime_FileSharing + 
+               DeploymentTime_ReportSyncing + 
+               DeploymentTime_ChatProtocol + 
+               DeploymentTime_MapAccess + 
+               DeploymentTime_Connectivity + 
+               DeploymentTime_DataBase + 
+               DeploymentTime_ArchitecturalPattern;
+
+Decision LF:DeploymentTime_LocationFinding = GPS:triangular(2, 3, 3), radio_triangulation:triangular(1, 1, 2);
+Decision FS:DeploymentTime_FileSharing = OpenIntent:triangular(1, 1, 2), In_house:0;
+Decision RS:DeploymentTime_ReportSyncing = Explicit:triangular(1, 1, 2), Implicit:1;
+Decision CP:DeploymentTime_ChatProtocol = XMPP_Open_Fire:triangular(1, 1, 2), In_house:0;
+Decision MA:DeploymentTime_MapAccess = On_Demand_Google:0, Cache_on_server:triangular(3, 4, 5), Preloaded_ESRI:triangular(3, 4, 5);
+Decision CC:DeploymentTime_Connectivity = Wifi:triangular(5, 6, 7), 3G_on_Nexus_I:triangular(2, 3, 4), 3G_on_Droid:triangular(2, 3, 4), Bluetooth:triangular(4, 5, 15);
+Decision DB:DeploymentTime_DataBase = MySQL:triangular(10, 15, 16), sqLite:triangular(13, 14, 22);
+Decision AP:DeploymentTime_ArchitecturalPattern = Peer_to_peer:triangular(14, 18, 21), Client_Server:triangular(7, 9, 10), Push_based:triangular(8, 9, 12);

@@ -1,0 +1,143 @@
+Model ECS;
+Samples 1000;
+
+DM Order_Reassignment = Current, Allow_Order_Reassignment;
+DM Forced_Order_Completion = Current, Allow_Forced_Order_Completion;
+DM Order_Persistence_Strategy = Current, Store_as_soon_as_received;
+DM Order_Segmentation = Current, Orders_are_segmented;
+DM Hung_Order_Recovery = Current, Allow_Order_Retry;
+DM Failed_Order_Notification = Current, User_notified_of_failed_order;
+DM Order_Tracking = Current, Granule_level_order_tracking;
+DM Available_User_Information = Current, Link_to_user_information;
+DM Order_Chunking = Current, Order_Chunking;
+DM Order_Bundling = No_Order_Bundling, Order_Bundling;
+
+Max ExpectedUtility = EV(Utility);
+
+
+Utility = (HungRequestsRatio_weight * HungRequestsRatio_Utility) +
+			(LostRequestsRatio_weight * LostRequestsRatio_Utility) +
+			(FailedOrderRatio_weight * FailedOrderRatio_Utility) +
+			(HungOrdersRatio_weight * HungOrdersRatio_Utility) +
+			(LostOrdersRatio_weight * LostOrdersRatio_Utility) +
+			(HelpNeededByUsers_weight * HelpNeededByUsers_Utility) +
+			(FailureInfoGivenToUsers_weight * FailureInfoGivenToUsers_Utility) +
+			(LimitOnOrders_weight * LimitOnOrders_Utility) +
+			(NotificationsFrequency_weight * NotificationsFrequency_Utility) +
+			(Performance_weight * Performance_Utility);
+
+HungRequestsRatio_weight = 10;
+LostRequestsRatio_weight = 15;
+FailedOrderRatio_weight = 15;
+HungOrdersRatio_weight = 10;
+LostOrdersRatio_weight = 15;
+HelpNeededByUsers_weight = 10;
+FailureInfoGivenToUsers_weight = 5;
+LimitOnOrders_weight  = 5;
+NotificationsFrequency_weight = 10;
+Performance_weight = 5;
+
+HungRequestsRatio_Utility = (HungRequestRatio - HungRequestRatio_worst)/(HungRequestRatio_best - HungRequestRatio_worst);
+HungRequestRatio_best = 0;
+HungRequestRatio_worst = 0.1;
+
+LostRequestsRatio_Utility = (LostRequestsRatio - LostRequestsRatio_worst)/(LostRequestsRatio_best - LostRequestsRatio_worst);
+LostRequestsRatio_best =0;
+LostRequestsRatio_worst = 0.05;
+
+FailedOrderRatio_Utility = (FailedOrderRatio - FailedOrderRatio_worst)/(FailedOrderRatio_best - FailedOrderRatio_worst);
+FailedOrderRatio_best = 0;
+FailedOrderRatio_worst = 0.1;
+
+HungOrdersRatio_Utility = (HungOrdersRatio - HungOrdersRatio_worst)/(HungOrdersRatio_best - HungOrdersRatio_worst);
+HungOrdersRatio_best = 0;
+HungOrdersRatio_worst = 0.10;
+
+LostOrdersRatio_Utility = (LostOrdersRatio - LostOrdersRatio_worst)/(LostOrdersRatio_best - LostOrdersRatio_worst);
+LostOrdersRatio_best = 0;
+LostOrdersRatio_worst = 0.10;
+
+HelpNeededByUsers_Utility = (HelpNeededByUsers - HelpNeededByUsers_worst)/(HelpNeededByUsers_best - HelpNeededByUsers_worst);
+HelpNeededByUsers_best = 0;
+HelpNeededByUsers_worst = 0.50;
+
+FailureInfoGivenToUsers_Utility = (FailureInfoGivenToUsers - FailureInfoGivenToUsers_worst)/(FailureInfoGivenToUsers_best - FailureInfoGivenToUsers_worst);
+FailureInfoGivenToUsers_best = 1.0;
+FailureInfoGivenToUsers_worst = 0.10;
+
+LimitOnOrders_Utility = (LimitOnOrders - LimitOnOrders_worst)/(LimitOnOrders_best - LimitOnOrders_worst);
+LimitOnOrders_best = 0;
+LimitOnOrders_worst = 0.50;
+
+NotificationsFrequency_Utility = (NotificationsFrequency - NotificationsFrequency_worst)/(NotificationsFrequency_best - NotificationsFrequency_worst);
+NotificationsFrequency_best = 1.0;
+NotificationsFrequency_worst = 1/1000;
+
+Performance_Utility = (Performance - Performance_worst)/(Performance_best - Performance_worst);
+Performance_best = 0.90;
+Performance_worst = 0.50;
+
+HungRequestRatio = HungRequestRatio_current 
+					* (1 - ReassignedHungRequestRatio) 
+					* (1 - ForcedHungRequestRatio);
+
+HungRequestRatio_current = 0.05;
+Decision Order_Reassignment:ReassignedHungRequestRatio = Current:0, Allow_Order_Reassignment:0.6;
+Decision Forced_Order_Completion:ForcedHungRequestRatio = Current:0, Allow_Forced_Order_Completion:0.4;
+
+LostRequestsRatio = triangular(0, 0.5, 1);
+
+Decision Order_Persistence_Strategy:FailedOrderRatio = Current:0.05, Store_as_soon_as_received:0.02;
+
+HungOrdersRatio = HungOrdersRatio_current *
+					(1 - SkippedHungOrderRatio) *
+					(1 - RetriedHungOrderRatio);
+
+HungOrdersRatio_current = 0.1;
+Decision Order_Segmentation:SkippedHungOrderRatio = Current:0, Orders_are_segmented:0.6;
+Decision Hung_Order_Recovery:RetriedHungOrderRatio = Current:0, Allow_Order_Retry:0.4;
+
+
+HelpNeededByUsers = LostOrdersRatio * HelpNeededPerLostOrder * HelpNeededForTrackingGranularity;
+Decision Order_Persistence_Strategy:LostOrdersRatio = Current:0.01, Store_as_soon_as_received:0;
+Decision Failed_Order_Notification:HelpNeededPerLostOrder = Current:0.25, User_notified_of_failed_order:0.2;
+Decision Order_Tracking:HelpNeededForTrackingGranularity = Current:1, Granule_level_order_tracking:0.4;
+
+FailureInfoGivenToUsers = 1- RatioUsersNotGettingInfo;
+RatioUsersNotGettingInfo = RatioUsersNotGettingInfo_current *
+							(1 - NotificationOrderEffect) *
+							(1 - OrderTrackingGranularityEffect) *
+							(1 - UserInformationEffect);
+
+RatioUsersNotGettingInfo_current = 0.5;
+Decision Failed_Order_Notification:NotificationOrderEffect = Current:0, User_notified_of_failed_order:0.8;
+Decision Order_Tracking:OrderTrackingGranularityEffect = Current:0, Granule_level_order_tracking:0.9;
+Decision Available_User_Information:UserInformationEffect = Current:0, Link_to_user_information:0.2;
+
+Decision Order_Chunking:LimitOnOrders = Current:0.3, Order_Chunking:0.15;
+Decision Order_Bundling:NotificationsFrequency = No_Order_Bundling:1, Order_Bundling:0.01;
+Decision Order_Bundling:Performance = No_Order_Bundling:0.6, Order_Bundling:0.55;
+
+Min ExpectedCost = EV(Cost);
+
+Cost =	Cost_OrderReassignment +
+		Cost_ForcedOrderCompletion +
+		Cost_OrderPersistenceStrategy +
+		Cost_OrderSegmentation +
+		Cost_HungOrderRecovery +
+		Cost_FailedOrderNotification +
+		Cost_OrderTracking +
+		Cost_AvailableUserInformation +
+		Cost_OrderChunking +
+		Cost_OrderBundling;
+
+Decision Order_Reassignment:Cost_OrderReassignment = Current:0, Allow_Order_Reassignment:triangular(360, 400, 440);
+Decision Forced_Order_Completion:Cost_ForcedOrderCompletion = Current:0, Allow_Forced_Order_Completion:triangular(180, 200, 220);
+Decision Order_Persistence_Strategy:Cost_OrderPersistenceStrategy = Current:0, Store_as_soon_as_received:triangular(1200, 1200, 7150);
+Decision Order_Segmentation:Cost_OrderSegmentation = Current:0, Orders_are_segmented:triangular(180, 200, 220);
+Decision Hung_Order_Recovery:Cost_HungOrderRecovery = Current:0, Allow_Order_Retry:triangular(180, 200, 220);
+Decision Failed_Order_Notification:Cost_FailedOrderNotification = Current:0, User_notified_of_failed_order:triangular(270, 300, 330);
+Decision Order_Tracking:Cost_OrderTracking = Current:0, Granule_level_order_tracking:triangular(900, 1000, 1650);
+Decision Available_User_Information:Cost_AvailableUserInformation = Current:0, Link_to_user_information:triangular(90, 100, 440);
+Decision Order_Chunking:Cost_OrderChunking = Current:0, Order_Chunking:triangular(360, 400, 440);
+Decision Order_Bundling:Cost_OrderBundling = No_Order_Bundling:0, Order_Bundling:triangular(360, 400, 440);

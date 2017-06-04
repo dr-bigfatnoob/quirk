@@ -1,0 +1,65 @@
+Model BSPDM;
+
+Objective Min ExpectedCostOfDisclosures = EV(Cost_of_Disclosures);
+
+Objective Min RiskOfCatastrophicDisclosures = Pr(Cost_of_Disclosures > 10^6);
+
+Cost_of_Disclosures = 
+    Nbr_HighConfidentialityLeaks * Cost_HighConfidentialityLeak
+    + Nbr_MediumConfidentialityLeaks * Cost_MediumConfidentialityLeak
+    + Nbr_LowConfidentialityLeaks * Cost_LowConfidentialityLeak;
+    	
+Nbr_HighConfidentialityLeaks = Nbr_LeakedDoc * Ratio_HighConfidentialityDocs;
+Nbr_MediumConfidentialityLeaks = Nbr_LeakedDoc * Ratio_MediumConfidentialityDocs;
+Nbr_LowConfidentialityLeaks = Nbr_LeakedDoc * Ratio_LowConfidentialityDocs;
+   	
+Ratio_HighConfidentialityDocs = uniform(0.5%, 2%);
+Ratio_MediumConfidentialityDocs = uniform(4%, 10%);
+Ratio_LowConfidentialityDocs = uniform(30%, 60%);
+
+// other docs are not confidential 
+    
+Cost_HighConfidentialityLeak = normalCI(0.5*10^6, 5*10^6);
+Cost_MediumConfidentialityLeak = normalCI(10^4, 5*10^4);
+Cost_LowConfidentialityLeak = normalCI(10^2, 10^4);
+
+Nbr_LeakedDoc = Nbr_DocsLeakedByInsiders + Nbr_DocsStolenByOutsiders;
+
+Nbr_DocsLeakedByInsiders = 
+       Probability_InsidersLeak * 
+       Nbr_DocsOnSharedDrive * 
+       SharedDriveLeakRange;
+       
+Probability_InsidersLeak = deterministic(10^-3);
+SharedDriveLeakRange = triangular(10%, 50%, 100%);
+
+Nbr_DocsStolenByOutsiders = Nbr_OfficeIntrusions* Nbr_DocsStolenPerIntrusion;
+		
+Nbr_OfficeIntrusions = decision("Building entry security"){
+		"not guarded"	: triangular(0, 3, 6);
+		"guarded" 	: triangular(0, 1, 2);
+}
+
+Nbr_DocsStolenPerIntrusion = Nbr_ExternalMediaStolenPerIntrusion * Nbr_DocsOnExternalMedia;
+		
+Nbr_ExternalMediaStolenPerIntrusion = Nbr_ExternalMediaInUse * Percentage_MediaStolenPerInstrusion;
+		
+Percentage_MediaStolenPerInstrusion = triangular(0, 1%, 10%);
+/*Percentage_MediaStolenPerInstrusion = triangular(0, 0.01, 0.1);*/
+
+Nbr_DocsOnSharedDrive = decision("Document Sharing Policy"){
+    		"Neutral": deterministic(143);
+    		"Recommend Email": deterministic(44);
+    		"Recommend External Media": deterministic(91);
+} 
+
+Nbr_DocsOnExternalMedia = decision("Document Sharing Policy"){
+    		"Neutral": deterministic(0);
+    		"Recommend Email": deterministic(0);
+    		"Recommend External Media": deterministic(52);
+}
+
+Nbr_ExternalMediaInUse = Nbr_DocsOnExternalMedia / Nbr_DocsPerMedia;
+
+Nbr_DocsPerMedia = triangular(0, 5, 10) ;
+		           		

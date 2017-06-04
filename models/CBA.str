@@ -1,0 +1,11 @@
+Model cba;
+Samples 1000;
+Max ENB = EV(bc);
+Min LP = STD(bc);
+
+DM arch_choice = as_is , refactor;
+
+bc = benefit - cost;
+Decision arch_choice:benefit = as_is:normalCI(1, 9), refactor:normalCI(0.9, 1.1);
+Decision arch_choice:cost = as_is:normalCI(1, 5), refactor:0;
+

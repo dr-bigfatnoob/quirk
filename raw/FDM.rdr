@@ -1,0 +1,123 @@
+Model FDM ;
+
+// Objectives
+
+Objective Max FraudDetectionBenefit = EV(Benefit);
+
+Benefit = BaseLineFinancialLoss - FinancialLoss;
+
+BaseLineFinancialLoss = deterministic(500000);
+
+Objective Min InvestigationLoad = percentile(NbrAlerts, 95);
+
+
+// Modelling Financial Loss
+
+FinancialLoss =AverageFraudValue* NbrCompromisedAccounts*NbrFraudPerAccountBeforeBlocked;
+
+NbrCompromisedAccounts = NbrAccounts * CompromisedAccountRatio;
+
+NbrAccounts = normalCI(0.9 * 10^6, 1.1 * 10^6);
+CompromisedAccountRatio = triangular(0, 0.0001, 0.0003 );
+
+AverageFraudValue = normalCI(100, 1000);
+
+NbrFraudPerAccountBeforeBlocked = decision("blocking policy"){
+    "block first"          : NbrFraudBeforeDetection;
+    "investigate first"    : NbrFraudBeforeDetection + NbrFraudDuringInvestigation;
+}
+
+NbrFraudBeforeDetection = decision("processing type"){
+	"continuous"    :    1 / ContinuousTrueAlertRate;
+    "batch"         :    NbrFraudPerCompromisedAccountPerDay / BatchTrueAlertRate;
+}
+  
+NbrFraudPerCompromisedAccountPerDay = normalCI(1, 20);
+
+NbrFraudDuringInvestigation = NbrFraudPerCompromisedAccountPerDay * InvestigationDelay;
+
+InvestigationDelay = triangular(1/24, 1/3, 1);
+
+ContinuousTrueAlertRate = decision("fraud detection method"){
+	"classifier" :  ContinuousAlertThreshold;
+	"rule-based" :  deterministic(0.75);
+}
+
+ContinuousAlertThreshold = decision("alert threshold"){
+	"low"   : triangular(0.75, 0.85, 0.95);
+	"medium" : triangular(0.65, 0.75, 0.85);
+	"high"    : triangular(0.55, 0.65, 0.75);
+}
+
+BatchTrueAlertRate = decision("fraud detection method"){
+	"classifier" :  BatchAlertThreshold;
+	"rule-based" :  deterministic(0.80);
+}
+
+BatchAlertThreshold = decision("alert threshold"){
+	"low"   : triangular(0.75, 0.85, 0.95);
+	"medium" : triangular(0.65, 0.75, 0.85);
+	"high"    : triangular(0.55, 0.65, 0.75);
+}
+
+
+// Modelling Investigation Load
+
+    
+NbrAlerts = NbrTrueAlerts + NbrFalseAlerts ;
+    
+NbrTrueAlerts = NbrFraud * TrueAlertRate;
+
+NbrFalseAlerts = NbrLegitTransactions * (1- TrueNegativeRate);
+
+TrueAlertRate = decision("processing type"){
+    "continuous" : ContinuousTrueAlertRate;
+    "batch"      : BatchTrueAlertRate;
+
+}
+
+TrueNegativeRate = decision("processing type"){
+    "continuous" : ContinuousTrueNegativeRate;
+    "batch"      : BatchTrueNegativeRate;
+}	
+	
+ContinuousTrueNegativeRate = decision("fraud detection method"){
+	"classifier" :  ContinuousClassierTrueNegativeRate;
+	"rule-based" :  deterministic(0.99);
+}
+
+ContinuousClassierTrueNegativeRate = decision("alert threshold"){
+	"low"   : triangular(0.95, 0.99, 0.995);
+	"medium" : triangular(0.99, 0.995, 0.999);
+	"high"    : triangular(0.995, 0.999, 0.9999);
+}
+
+BatchTrueNegativeRate = decision("fraud detection method"){
+	"classifier" :  BatchClassifierTrueNegativeRate;
+	"rule-based" :  deterministic(0.995);
+}
+
+BatchClassifierTrueNegativeRate = decision("alert threshold"){
+	"low"   : triangular(0.9, 0.99, 0.995);
+	"medium" : triangular(0.99, 0.995, 0.999);
+	"high"    : triangular(0.995, 0.999, 0.9999);
+}
+
+NbrFraud = NbrAccounts * CompromisedAccountRatio * NbrFraudPerCompromisedAccountPerDay;
+
+NbrLegitTransactions = NbrAccounts  * NbrLegitTransactionsPerAccountPerDay;
+
+NbrFraudPerCompromisedAccountPerDay  = triangular(0, 3, 10);
+
+NbrLegitTransactionsPerAccountPerDay = triangular(0, 3, 10);
+
+
+
+ 
+
+
+
+
+
+
+

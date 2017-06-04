@@ -1,0 +1,225 @@
+Model ECS;
+
+Objective Max ExpectedUtility = EV(Utility);
+
+Utility = 	HungRequestsRatio_weight * HungRequestsRatio_Utility +
+			LostRequestsRatio_weight * LostRequestsRatio_Utility +
+			FailedOrderRatio_weight * FailedOrderRatio_Utility +
+			HungOrdersRatio_weight * HungOrdersRatio_Utility +
+			LostOrdersRatio_weight * LostOrdersRatio_Utility +
+			HelpNeededByUsers_weight * HelpNeededByUsers_Utility +
+			FailureInfoGivenToUsers_weight * FailureInfoGivenToUsers_Utility +
+			LimitOnOrders_weight * LimitOnOrders_Utility +
+			NotificationsFrequency_weight * NotificationsFrequency_Utility +
+			Performance_weight * Performance_Utility;
+
+     
+HungRequestsRatio_weight = deterministic(10);
+LostRequestsRatio_weight = deterministic(15);
+FailedOrderRatio_weight = deterministic(15);
+HungOrdersRatio_weight = deterministic(10);
+LostOrdersRatio_weight = deterministic(15);
+HelpNeededByUsers_weight = deterministic(10);
+FailureInfoGivenToUsers_weight = deterministic(5);
+LimitOnOrders_weight  = deterministic(5);
+NotificationsFrequency_weight = deterministic(10);
+Performance_weight = deterministic(5);
+
+// Note: in following equations, should best and worst levels be parameters?
+// A: not paramaterss because we assume they are fixed, given levels_
+
+HungRequestsRatio_Utility = (HungRequestRatio - HungRequestRatio_worst)/(HungRequestRatio_best - HungRequestRatio_worst);
+HungRequestRatio_best = deterministic(0);
+HungRequestRatio_worst = deterministic(0.1);
+
+LostRequestsRatio_Utility = (LostRequestsRatio - LostRequestsRatio_worst)/(LostRequestsRatio_best - LostRequestsRatio_worst);
+LostRequestsRatio_best =deterministic(0);
+LostRequestsRatio_worst = deterministic(5%);
+
+FailedOrderRatio_Utility = (FailedOrderRatio - FailedOrderRatio_worst)/(FailedOrderRatio_best - FailedOrderRatio_worst);
+FailedOrderRatio_best = deterministic(0);
+FailedOrderRatio_worst = deterministic(10%);
+
+HungOrdersRatio_Utility = (HungOrdersRatio - HungOrdersRatio_worst)/(HungOrdersRatio_best - HungOrdersRatio_worst);
+HungOrdersRatio_best = deterministic(0);
+HungOrdersRatio_worst = deterministic(10%);
+
+LostOrdersRatio_Utility = (LostOrdersRatio - LostOrdersRatio_worst)/(LostOrdersRatio_best - LostOrdersRatio_worst);
+LostOrdersRatio_best = deterministic(0);
+LostOrdersRatio_worst = deterministic(10%);
+
+HelpNeededByUsers_Utility = (HelpNeededByUsers - HelpNeededByUsers_worst)/(HelpNeededByUsers_best - HelpNeededByUsers_worst);
+HelpNeededByUsers_best = deterministic(0);
+HelpNeededByUsers_worst = deterministic(50%);
+
+FailureInfoGivenToUsers_Utility = (FailureInfoGivenToUsers - FailureInfoGivenToUsers_worst)/(FailureInfoGivenToUsers_best - FailureInfoGivenToUsers_worst);
+FailureInfoGivenToUsers_best = deterministic(100%);
+FailureInfoGivenToUsers_worst = deterministic(10%);
+
+LimitOnOrders_Utility = (LimitOnOrders - LimitOnOrders_worst)/(LimitOnOrders_best - LimitOnOrders_worst);
+LimitOnOrders_best = deterministic(0%);
+LimitOnOrders_worst = deterministic(50%);
+
+NotificationsFrequency_Utility = (NotificationsFrequency - NotificationsFrequency_worst)/(NotificationsFrequency_best - NotificationsFrequency_worst);
+NotificationsFrequency_best = deterministic(1);
+NotificationsFrequency_worst = deterministic(1/1000);
+
+Performance_Utility = (Performance - Performance_worst)/(Performance_best - Performance_worst);
+Performance_best =deterministic(90%);
+Performance_worst = deterministic(50%);
+
+HungRequestRatio = HungRequestRatio_current 
+					* (1 - ReassignedHungRequestRatio) 
+					* (1 - ForcedHungRequestRatio);
+					
+HungRequestRatio_current = deterministic(5%);
+					
+ReassignedHungRequestRatio = decision("Order Reassignment"){
+		"Current: not possible to reassign order" : deterministic(0);
+		"Allow Order Reassignment": deterministic(60%);
+}	
+
+ForcedHungRequestRatio = decision("Forced Order Completion"){
+		"Current: not possible to force order completion" : deterministic(0);
+		"Allow Forced Order Completion": deterministic(40%);
+}	
+
+LostRequestsRatio = triangular(0, 0.5, 1);
+
+FailedOrderRatio = decision("Order Persistence Strategy"){
+		"Current: store when processed" : deterministic(5%);
+		"Store as soon as received" 	 : deterministic(2%);
+}
+
+HungOrdersRatio = HungOrdersRatio_current *
+					(1 - SkippedHungOrderRatio) *
+					(1 - RetriedHungOrderRatio);
+
+HungOrdersRatio_current = deterministic(10%);
+					
+SkippedHungOrderRatio = decision("Order Segmentation"){
+		"Current: no order segmentation" : deterministic(0);
+		"Orders are segmented"			  : deterministic(60%);
+}
+
+RetriedHungOrderRatio = decision("Hung Order Recovery"){
+		"Current: no order retry" 	: deterministic(0);
+		"Allow Order Retry"		: deterministic(40%);
+}
+
+LostOrdersRatio = decision("Order Persistence Strategy"){
+		"Current: store when processed" : deterministic(1%);
+		"Store as soon as received" 	 : deterministic(0%);
+}
+
+HelpNeededByUsers = LostOrdersRatio * HelpNeededPerLostOrder * HelpNeededForTrackingGranularity;
+
+HelpNeededPerLostOrder = decision("Failed Order Notification"){
+		"Current: no notification": deterministic(25%);
+		"User notified of failed order": deterministic(20%);
+}
+
+HelpNeededForTrackingGranularity = decision("Order Tracking"){
+ 		"Current: order level"			: deterministic(1);
+ 		"Granule-level order tracking"		: deterministic(40%);
+ }
+ 
+FailureInfoGivenToUsers = 1- RatioUsersNotGettingInfo;
+RatioUsersNotGettingInfo = RatioUsersNotGettingInfo_current * 
+							(1 - NotificationOrderEffect) * 
+							(1 - OrderTrackingGranularityEffect) *
+							(1 - UserInformationEffect);
+							
+RatioUsersNotGettingInfo_current = deterministic(50%);
+
+NotificationOrderEffect = decision("Failed Order Notification"){
+		"Current: no notification": deterministic(0);
+		"User notified of failed order": deterministic(80%);
+}
+
+OrderTrackingGranularityEffect = decision("Order Tracking"){
+ 		"Current: order level"			: deterministic(0);
+ 		"Granule-level order tracking"	: deterministic(90%);
+ }
+ 
+UserInformationEffect = decision("Available User Information"){
+		"Current: no link to user info"		: deterministic(0);
+		"Link to user information"		: deterministic(20%);
+}
+
+LimitOnOrders = decision("Order Chunking"){
+		"Current: no oder chunking": deterministic(30%);
+		"Order Chunking"	: deterministic(15%);
+}
+
+NotificationsFrequency = decision("Order Bundling"){
+		"No Order Bundling" : deterministic(1);
+		"Order Bundling"	: deterministic(0.01);
+}
+
+Performance = decision("Order Bundling"){
+		"No Order Bundling" : deterministic(60%);
+		"Order Bundling"	: deterministic(55%);
+}
+
+Objective Min Cost;
+
+Cost =	Cost_OrderReassignment +
+		Cost_ForcedOrderCompletion +
+		Cost_OrderPersistenceStrategy +
+		Cost_OrderSegmentation +
+		Cost_HungOrderRecovery +
+		Cost_FailedOrderNotification +
+		Cost_OrderTracking +
+		Cost_AvailableUserInformation;		
+
+Cost_OrderReassignment = decision("Order Reassignment"){
+		"Current: not possible to reassign order" : deterministic(0);
+		"Allow Order Reassignment": triangular(360, 400, 440);
+}	
+
+Cost_ForcedOrderCompletion = decision("Forced Order Completion"){
+		"Current: not possible to force order completion" : deterministic(0);
+		"Allow Forced Order Completion": triangular(180, 200, 220);
+}
+
+Cost_OrderPersistenceStrategy = decision("Order Persistence Strategy"){
+		"Current: store when processed" : deterministic(0);
+		"Store as soon as received" 	 : triangular(1200, 1200, 7150);
+}
+
+Cost_OrderSegmentation = decision("Order Segmentation"){
+		"Current: no order segmentation" : deterministic(0);
+		"Orders are segmented"		 : triangular(180, 200, 220);
+}
+
+Cost_HungOrderRecovery = decision("Hung Order Recovery"){
+		"Current: no order retry" 	: deterministic(0);
+		"Allow Order Retry"		: triangular(180, 200, 220);
+}
+
+Cost_FailedOrderNotification = decision("Failed Order Notification"){
+		"Current: no notification": deterministic(0);
+		"User notified of failed order": triangular(270, 300, 330);
+}
+
+Cost_OrderTracking = decision("Order Tracking"){
+ 		"Current: order level"		: deterministic(0);
+ 		"Granule-level order tracking"	: triangular(900, 1000, 1650);
+}
+
+Cost_AvailableUserInformation = decision("Available User Information"){
+		"Current: no link to user info"		: deterministic(0);
+		"Link to user information"		: triangular(90, 100, 440);
+}
+
+Cost_OrderChunking = decision("Order Chunking"){
+		"Current: no oder chunking"	: deterministic(0);
+		"Order Chunking"		: triangular(360, 400, 440);
+}
+
+Cost_OrderBundling = decision("Order Bundling"){
+		"No Order Bundling" 	: deterministic(0);
+		"Order Bundling"	: triangular(360, 400, 440);
+}	
+

@@ -1,0 +1,45 @@
+Model fdm;
+Samples 1000;
+
+Max EV = EV(Benefit);
+Min 95P = PERCENTILE(NbrAlerts, 95);
+
+# Decision Maps
+DM blocking_policy = block_first, investigate_first;
+DM processing_type = continuous, batch;
+DM fraud_detection_method = classifier, rule_based;
+DM alert_threshold = low, med, high;
+
+# Financial Loss
+Benefit = BaseLineFinancialLoss - FinancialLoss;
+BaseLineFinancialLoss = 500000;
+FinancialLoss = AverageFraudValue * NbrCompromisedAccounts * NbrFraudPerAccountBeforeBlocked;
+NbrCompromisedAccounts = NbrAccounts * CompromisedAccountRatio;
+NbrAccounts = normalCI(0.9 * 10^6, 1.1 * 10^6);
+CompromisedAccountRatio = triangular(0, 0.0001, 0.0003);
+AverageFraudValue = normalCI(100, 1000);
+
+Decision blocking_policy:NbrFraudPerAccountBeforeBlocked = block_first:NbrFraudBeforeDetection, investigate_first:(NbrFraudBeforeDetection + NbrFraudDuringInvestigation);
+Decision processing_type:NbrFraudBeforeDetection = continuous:(1 / ContinuousTrueAlertRate) , batch:(NbrFraudPerCompromisedAccountPerDay / BatchTrueAlertRate);
+
+NbrFraudPerCompromisedAccountPerDay = normalCI(1, 20);
+NbrFraudDuringInvestigation = NbrFraudPerCompromisedAccountPerDay * InvestigationDelay;
+InvestigationDelay = triangular(1/24, 1/3, 1);
+Decision fraud_detection_method:ContinuousTrueAlertRate = classifier:ContinuousAlertThreshold, rule_based:0.75;
+Decision alert_threshold:ContinuousAlertThreshold = low:triangular(0.75, 0.85, 0.95), med:triangular(0.65, 0.75, 0.85), high:triangular(0.55, 0.65, 0.75);
+Decision fraud_detection_method:BatchTrueAlertRate = classifier:BatchAlertThreshold, rule_based:0.8;
+Decision alert_threshold:BatchAlertThreshold = low:triangular(0.75, 0.85, 0.95), med:triangular(0.65, 0.75, 0.85), high:triangular(0.55, 0.65, 0.75);
+
+
+# Investigation Load
+NbrAlerts = NbrTrueAlerts + NbrFalseAlerts;
+NbrTrueAlerts = NbrFraud * TrueAlertRate;
+NbrFalseAlerts = NbrLegitTransactions * (1 - TrueNegativeRate);
+Decision processing_type:TrueAlertRate = continuous:ContinuousTrueAlertRate, batch:BatchTrueAlertRate;
+Decision processing_type:TrueNegativeRate = continuous:ContinuousTrueNegativeRate, batch:BatchTrueNegativeRate;
+Decision fraud_detection_method:ContinuousTrueNegativeRate = classifier:ContinuousClassierTrueNegativeRate, rule_based:0.99;
+Decision alert_threshold:ContinuousClassierTrueNegativeRate = low:triangular(0.95, 0.99, 0.995), med:triangular(0.99, 0.995, 0.999), high:triangular(0.995, 0.999, 0.9999);
+Decision fraud_detection_method:BatchTrueNegativeRate = classifier:BatchClassifierTrueNegativeRate, rule_based:0.995;
+Decision alert_threshold:BatchClassifierTrueNegativeRate = low:triangular(0.95, 0.99, 0.995), med:triangular(0.99, 0.995, 0.999), high:triangular(0.995, 0.999, 0.9999);
+NbrFraud = NbrAccounts * CompromisedAccountRatio * triangular(0, 3, 10);
+NbrLegitTransactions = NbrAccounts  * triangular(0, 3, 10);

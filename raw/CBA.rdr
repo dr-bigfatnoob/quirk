@@ -1,0 +1,13 @@
+Model Refactoring;
+Objective Max ENB = EV(NB);
+Objective Min LP=Pr(NB <0);
+NB = Benefit - Cost;
+Benefit = decision("Architecture choice"){
+	"As-is" 	: normalCI(1, 9);
+	"Refactoring" : normalCI(0.9, 1.1);
+}
+Cost = decision("Architecture choice"){
+	"As-is" : normalCI(1, 5);
+	"Refactoring" : normalCI(0, 0);
+} 
+
