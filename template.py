@@ -220,7 +220,9 @@ class Model(O):
     solutions = OrderedDict()
     if self.decision_map:
       ref = {key: np.random.choice(vals) for key, vals in self.decision_map.items()}
+      print(ref)
       for key, decision in self.decisions.items():
+        print([x for x in decision.options])
         solutions[key] = decision.options[ref[decision.key]].id
     else:
       for key, decision in self.decisions.items():
@@ -279,8 +281,6 @@ class Model(O):
   def test(self):
     self.initialize()
     print("Max Size = %d" % self.get_max_size())
-    # for inp in self.inputs.values():
-    #   print(inp.samples)
     solutions = self.populate(10)
     # print(self.evaluate(solutions[0]))
     for sol in solutions:

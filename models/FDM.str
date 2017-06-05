@@ -4,12 +4,6 @@ Samples 1000;
 Max EV = EV(Benefit);
 Min 95P = PERCENTILE(NbrAlerts, 95);
 
-# Decision Maps
-DM blocking_policy = block_first, investigate_first;
-DM processing_type = continuous, batch;
-DM fraud_detection_method = classifier, rule_based;
-DM alert_threshold = low, med, high;
-
 # Financial Loss
 Benefit = BaseLineFinancialLoss - FinancialLoss;
 BaseLineFinancialLoss = 500000;

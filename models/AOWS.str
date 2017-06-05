@@ -1,0 +1,80 @@
+Model aows;
+Samples 1000;
+
+# Cost
+
+Decision Modernize:Cost_Modernize = Incremental:Cost_Incremental_Rewrite , BigBang:Cost_Big_Bang_Rewrite;
+
+Cost_Big_Bang_Rewrite = New_DB:triangular(1000, 1500, 2000) + PnP:triangular(1250, 1500, 1750);
+Cost_Incremental_Rewrite = Cost_Support + Cost_Existing_Apps +
+                           Cost_Data_Service + Cost_Data_Model +
+                           Cost_App_Framework + Cost_Monitor;
+
+Cost_Support = Documentation:triangular(100, 150, 200) + Testing:Cost_Regression;
+Decision Testing:Cost_Regression = DB_Vendor_Env:triangular(100, 150, 200), General_Env:triangular(100, 150, 200);
+Decision Existing_Apps:Cost_Existing_Apps = Bakeoff_Result:triangular(100, 150, 200),  Number_Tiers:Cost_Number_Tiers;
+Decision Number_Tiers:Cost_Number_Tiers = Service_layer:Cost_Service_Layer,
+                                          Two_Tier:triangular(100, 150, 200),
+                                          Three_tier:triangular(100, 150, 200);
+Decision Service_layer:Cost_Service_Layer = Existing:triangular(100, 150, 200),
+                                          Extracted:triangular(100, 150, 200);
+Decision Data_Service:Cost_Data_Service = Spec:triangular(100, 150, 200),
+                                          Pilot:triangular(100, 150, 200);
+Decision Data_Model:Cost_Data_Model = Comprehensive:Cost_Comprehensive,
+                                      Extensible:Cost_Extensible, Specific:Cost_Specific;
+Cost_Comprehensive = Logical_Data:triangular(100, 150, 200) + Shared_Data:triangular(100, 150, 200) + Mandatory_Data:triangular(100, 150, 200);
+Cost_Extensible = Internal_Extensible:triangular(100, 150, 200) + External_Extensible:triangular(100, 150, 200);
+Cost_Specific = External_Gets_Request:triangular(100, 150, 200) + Internal_Does_Whatever:triangular(100, 150, 200) +
+                External_Does_Whatever:triangular(100, 150, 200);
+
+Cost_App_Framework = J2EE_Specification:triangular(100, 150, 200);
+
+Decision Monitor:Cost_Monitor = Assessed:triangular(100, 150, 200), Pilot:triangular(100, 150, 200), Monitoring:triangular(100, 150, 200);
+
+Min Cost = EV(Cost_Modernize);
+
+# Benefit
+
+Decision Modernize:Benefit_Modernize = Incremental:Benefit_Incremental_Rewrite , BigBang:Benefit_Big_Bang_Rewrite;
+
+Benefit_Big_Bang_Rewrite = New_DB:triangular(1000, 1500, 2000) + PnP:triangular(1250, 1500, 1750);
+Benefit_Incremental_Rewrite = Benefit_Support + Benefit_Existing_Apps +
+                           Benefit_Data_Service + Benefit_Data_Model +
+                           Benefit_App_Framework + Benefit_Monitor;
+
+Benefit_Support = Documentation:triangular(100, 150, 200) + Testing:Benefit_Regression;
+Decision Testing:Benefit_Regression = DB_Vendor_Env:triangular(100, 150, 200), General_Env:triangular(100, 150, 200);
+Decision Existing_Apps:Benefit_Existing_Apps = Bakeoff_Result:triangular(100, 150, 200),  Number_Tiers:Benefit_Number_Tiers;
+Decision Number_Tiers:Benefit_Number_Tiers = Service_layer:Benefit_Service_Layer,
+                                          Two_Tier:triangular(100, 150, 200),
+                                          Three_tier:triangular(100, 150, 200);
+Decision Service_layer:Benefit_Service_Layer = Existing:triangular(100, 150, 200),
+                                          Extracted:triangular(100, 150, 200);
+Decision Data_Service:Benefit_Data_Service = Spec:triangular(100, 150, 200),
+                                          Pilot:triangular(100, 150, 200);
+Decision Data_Model:Benefit_Data_Model = Comprehensive:Benefit_Comprehensive,
+                                      Extensible:Benefit_Extensible, Specific:Benefit_Specific;
+Benefit_Comprehensive = Logical_Data:triangular(100, 150, 200) + Shared_Data:triangular(100, 150, 200) + Mandatory_Data:triangular(100, 150, 200);
+Benefit_Extensible = Internal_Extensible:triangular(100, 150, 200) + External_Extensible:triangular(100, 150, 200);
+Benefit_Specific = External_Gets_Request:triangular(100, 150, 200) + Internal_Does_Whatever:triangular(100, 150, 200) +
+                External_Does_Whatever:triangular(100, 150, 200);
+
+Benefit_App_Framework = J2EE_Specification:triangular(100, 150, 200);
+
+Decision Monitor:Benefit_Monitor = Assessed:triangular(100, 150, 200), Pilot:triangular(100, 150, 200), Monitoring:triangular(100, 150, 200);
+
+Max Benefit = EV(Benefit_Modernize);
+
+# SoftGoals
+
+Decision Modernize:SoftGoalWeight = Incremental:1 , BigBang:0;
+
+EasilyShareDataInternally = SoftGoalWeight * (Benefit_Existing_Apps + Benefit_Data_Service + Benefit_Data_Model);
+QuickFeatDelivery = SoftGoalWeight * (Benefit_Support + Benefit_App_Framework);
+EasilyShareDataPartners = SoftGoalWeight * (Benefit_Data_Service + Benefit_Data_Model);
+GoodExampleAgileGovtDevelopment =  QuickFeatDelivery + EasilyShareDataPartners;
+
+Max SG_EasilyShareDataInternally = EV(EasilyShareDataInternally);
+Max SG_QuickFeatDelivery = EV(QuickFeatDelivery);
+Max SG_EasilyShareDataPartners = EV(EasilyShareDataPartners);
+Max SG_GoodExampleAgileGovtDevelopment = EV(GoodExampleAgileGovtDevelopment);

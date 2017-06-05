@@ -1,17 +1,6 @@
 Model ECS;
 Samples 1000;
 
-DM Order_Reassignment = Current, Allow_Order_Reassignment;
-DM Forced_Order_Completion = Current, Allow_Forced_Order_Completion;
-DM Order_Persistence_Strategy = Current, Store_as_soon_as_received;
-DM Order_Segmentation = Current, Orders_are_segmented;
-DM Hung_Order_Recovery = Current, Allow_Order_Retry;
-DM Failed_Order_Notification = Current, User_notified_of_failed_order;
-DM Order_Tracking = Current, Granule_level_order_tracking;
-DM Available_User_Information = Current, Link_to_user_information;
-DM Order_Chunking = Current, Order_Chunking;
-DM Order_Bundling = No_Order_Bundling, Order_Bundling;
-
 Max ExpectedUtility = EV(Utility);
 
 

@@ -17,11 +17,12 @@ _min = "Min"
 
 # TODO: Implement decision mapping
 
+
 class Parser(NodeVisitor):
   def __init__(self, content):
     self.model = None
     self.uninitialized_variables = {}
-    self.initialized_variables= {}
+    self.initialized_variables = {}
     self._content = content
 
   def process(self):
@@ -47,7 +48,7 @@ class Parser(NodeVisitor):
         opts = {}
         for child in node.children:
           c_node = self.initialized_variables[child]
-          if "label" in c_node.has():
+          if "label" in c_node.has() and c_node.label is not  None:
             opts[c_node.label] = c_node
           else:
             opts[c_node.name] = c_node
@@ -73,8 +74,9 @@ class Parser(NodeVisitor):
   def visit_eq(self, node, vc):
     pass
 
-  def visit_var_lhs(self, node, _):
-    name = node.text
+  def visit_var_lhs(self, node, vc):
+    name = vc[0]
+    # print(self.uninitialized_variables.get(name, None))
     self.uninitialized_variables[name] = self.uninitialized_variables.get(name, None)
     return name
 
@@ -105,6 +107,21 @@ class Parser(NodeVisitor):
     lhs = vc[0]
     rhs = vc[-1]
     lhs.children = rhs
+    if lhs.key is not None:
+      labels = []
+      for kid in rhs:
+        label = None
+        if kid in self.uninitialized_variables:
+          label = self.uninitialized_variables[kid]
+        elif kid in self.initialized_variables:
+          label = self.initialized_variables[kid].label
+        if label is None:
+          raise Exception("Label is not defined for %s" % kid)
+        labels.append(label)
+      existing_labels = self.model.decision_map.get(lhs.key, None)
+      if existing_labels is not None and set(labels) != set(existing_labels):
+        raise Exception("New labels for key %s not consistent with existing labels" % lhs.key)
+      self.model.decision_map[lhs.key] = labels
     del self.uninitialized_variables[lhs.name]
     self.initialized_variables[lhs.name] = lhs
 
@@ -114,7 +131,7 @@ class Parser(NodeVisitor):
     if len(splits) > 1:
       dec = self.model.decision({}, name=splits[1], key=splits[0])
     else:
-      dec = self.model.decision({}, name=splits[0])
+      dec = self.model.decision({}, name=splits[0], key=None)
     if self.uninitialized_variables.get(dec.name, None) is not None:
       # print(self.uninitialized_variables.get(dec.name, None))
       # exit()
@@ -156,6 +173,7 @@ class Parser(NodeVisitor):
       rhs_node = self.initialized_variables.pop(rhs)
       rhs_node.name = lhs
       if lhs in self.uninitialized_variables:
+        rhs_node.label = self.uninitialized_variables[lhs]
         del self.uninitialized_variables[lhs]
       self.initialized_variables[rhs_node.name] = rhs_node
     else:
@@ -190,8 +208,6 @@ class Parser(NodeVisitor):
     else:
       ops = set([o.operation for o in vc[-1]])
       if len(ops) > 1:
-        print(_)
-        exit()
         raise Exception("Multiple operations not allowed: % s" % operations)
       op = operations[ops.pop()]
       nodes = [vc[0]] + [o.term for o in vc[-1]]
@@ -327,7 +343,15 @@ x1 = 5 + 6.6;
 
 if __name__ == "__main__":
   print("Method 1")
-  fdm = Parser.from_file("models/ECS.str")
+  fdm = Parser.from_file("models/AOWS.str")
+  # from collections import OrderedDict
+  # fdm.initialize()
+  # sol = OrderedDict()
+  # sol[13] = 5
+  # sol[14] = 11
+  # fdm.evaluate(sol)
+  # for node in fdm.nodes.values():
+  #   print(node.name, len(node.samples))
   # exit()
   fdm.test()
   # print("Method 2")

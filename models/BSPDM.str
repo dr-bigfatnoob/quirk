@@ -6,9 +6,6 @@ Min RiskOfCatastrophicDisclosures = PROBABILITY(Excess_Costs);
 
 Excess_Costs = Cost_of_Disclosures > 10^6;
 
-DM Building_entry_security = not_guarded, guarded;
-DM Document_Sharing_Policy = Neutral, Recommend_Email, Recommend_External_Media;
-
 Cost_of_Disclosures =
     (Nbr_HighConfidentialityLeaks * Cost_HighConfidentialityLeak)
     + (Nbr_MediumConfidentialityLeaks * Cost_MediumConfidentialityLeak)

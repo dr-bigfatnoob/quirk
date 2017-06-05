@@ -3,18 +3,6 @@ Samples 1000;
 
 Max ENB = EV(NB);
 
-DM LF = GPS, radio_triangulation;
-DM FS = OpenIntent, In_house;
-DM RS = Explicit, Implicit;
-DM CP = XMPP_Open_Fire, In_house;
-DM MA = On_Demand_Google, Cache_on_server, Preloaded_ESRI;
-DM HP = Nexus_I_HTC, Droid_Motorola;
-DM CC = Wifi, 3G_on_Nexus_I, 3G_on_Droid, Bluetooth;
-DM DB = MySQL, sqLite;
-DM AP = Peer_to_peer, Client_Server, Push_based;
-DM DF = XML, Compressed_XML, Unformatted_data;
-
-
 NB = (BatteryUsage_weight * BatteryUsage_Preference) +
      (ResponseTime_weight * ResponseTime_Preference) +
      (Reliability_weight * Reliability_Preference) +
