@@ -9,7 +9,7 @@ __author__ = "bigfatnoob"
 from language.grammar import grammar
 from parsimonious.nodes import NodeVisitor
 from template import Model, O, Decision
-from utils import MAXIMIZE, MINIMIZE
+from utils.lib import MAXIMIZE, MINIMIZE
 from functions import evaluations, distributions, operations
 
 _max = "Max"

@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
-from utils import O
+from utils.lib import O
 import numpy as np
 from collections import deque, OrderedDict
 from copy import deepcopy
@@ -18,6 +18,7 @@ class Component(O):
   should extend this class
   """
   id = 0
+
   def __init__(self, **kwargs):
     O.__init__(self, **kwargs)
     self.id = Component.id
@@ -99,6 +100,7 @@ class Decision(Node):
     self.samples = self.value.evaluate()
     return self.samples
 
+
 class Objective(Node):
   """
   An objective node.
@@ -136,6 +138,7 @@ class Input(Node):
   def evaluate(self):
     return self.samples
 
+
 class Variable(Node):
   def __init__(self):
     Node.__init__(self)
@@ -150,6 +153,7 @@ class Variable(Node):
       self.samples = [self.operation(s) for s in self.samples]
     return self.samples
 
+
 class Edge(Component):
   def __init__(self, source, target, operation):
     self.source = source
@@ -160,6 +164,7 @@ class Edge(Component):
 
 def same(node):
   return node.children[0].samples
+
 
 class Model(O):
   def __init__(self, name, sample_size=100):
@@ -177,7 +182,7 @@ class Model(O):
   def add_edge(self, source, target, operation=same):
     target.add_child(source, operation)
     edge = Edge(source, target, operation)
-    self.edges[edge.id] =edge
+    self.edges[edge.id] = edge
 
   def input(self, distribution, name=None):
     i = Input(distribution)
@@ -196,7 +201,7 @@ class Model(O):
   def decision(self, options, name=None, key=None):
     d = Decision(**options)
     for value in options.values():
-      self.add_edge(value, d, operation=None)
+      self.add_edge(value, d, None)
     d.name = name if name else d.id
     if key is not None:
       d.key = key
@@ -220,9 +225,7 @@ class Model(O):
     solutions = OrderedDict()
     if self.decision_map:
       ref = {key: np.random.choice(vals) for key, vals in self.decision_map.items()}
-      print(ref)
       for key, decision in self.decisions.items():
-        print([x for x in decision.options])
         solutions[key] = decision.options[ref[decision.key]].id
     else:
       for key, decision in self.decisions.items():
@@ -249,7 +252,6 @@ class Model(O):
       dic[name] = value
     for name, value in dic.items():
       print("\t name: %s, value: %s" % (name, value))
-
 
   def populate(self, size):
     max_size = self.get_max_size()

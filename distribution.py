@@ -3,10 +3,11 @@ import sys
 import os
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
-from utils import O
+from utils.lib import O
 import numpy as np
 
 __author__ = "bigfatnoob"
+
 
 class Distribution(O):
   def __init__(self):
