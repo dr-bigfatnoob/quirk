@@ -160,7 +160,6 @@ class DE(O):
       other.evaluate(self.model)
     return other
 
-
   def run(self):
     """
     DE runner
