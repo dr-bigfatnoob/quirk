@@ -25,14 +25,19 @@ def default():
       cr=0.3,
       seed=1,
       binary=True,
-      dominates="bdom",
+      dominates="bdom",  # bdom or cdom
       cdom_delta=0.01,
+      mutate="binary",  # binary or random
       early_termination=True,
   )
 
 
 def seed(val=None):
   random.seed(val)
+
+
+def choice(lst):
+  return random.choice(lst)
 
 
 class Point(O):
@@ -136,6 +141,26 @@ class DE(O):
         self.global_set.add(point)
     return list(population)
 
+  @staticmethod
+  def three_others(one, pop):
+    """
+    Return three other points from population
+    :param one: Point not to consider
+    :param pop: Population to look in
+    :return: two, three, four
+    """
+    def one_other():
+      while True:
+        x = choice(pop)
+        if x.id not in seen:
+          seen.append(x.id)
+          return x
+    seen = [one.id]
+    two = one_other()
+    three = one_other()
+    four = one_other()
+    return two, three, four
+
   def mutate(self, point, population):
     """
     Mutate point against the population
@@ -144,7 +169,12 @@ class DE(O):
     :return: Mutated point
     """
     # TODO: Implement DE binary mutation
-    return self.mutate_random(point, population)
+    if self.settings.mutate == "random":
+      return self.mutate_random(point, population)
+    elif self.settings.mutate == "binary":
+      return self.mutate_binary(point, population)
+    else:
+      raise Exception("Invalid mutation setting %s" % self.settings.mutate)
 
   def mutate_random(self, point, population):
     """
@@ -159,6 +189,19 @@ class DE(O):
       other = Point(self.model.generate())
       other.evaluate(self.model)
     return other
+
+  def mutate_binary(self, point, population):
+    two, three, four = DE.three_others(point, population)
+    random_key = choice(self.model.decisions.keys())
+    mutant_decisions = OrderedDict()
+    for key in self.model.decisions.keys():
+      r = random.random()
+      if r < self.settings.cr or key == random_key:
+        mutant_decisions[key] = random.choice([two.decisions[key], three.decisions[key], four.decisions[key]])
+      else:
+        mutant_decisions[key] = point.decisions[key]
+    return Point(mutant_decisions)
+
 
   def run(self):
     """
