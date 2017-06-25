@@ -1,6 +1,8 @@
 from __future__ import print_function, division
-import sys
+
 import os
+import sys
+
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
 
@@ -11,7 +13,7 @@ import random
 from collections import OrderedDict
 from utils.stats import Statistics
 import time
-import plotter
+from utils import plotter
 
 
 def default():
@@ -20,7 +22,7 @@ def default():
   :return:
   """
   return O(
-      gens=10,
+      gens=50,
       candidates=20,
       f=0.75,
       cr=0.3,
@@ -30,6 +32,7 @@ def default():
       cdom_delta=0.01,
       mutate="binary",  # binary or random
       early_termination=True,
+      verbose=True
   )
 
 
@@ -102,7 +105,10 @@ class DE(O):
     """
     O.__init__(self)
     self.model = model
+    if self.model.get_max_size() < 50:
+      raise Exception("Cannot run DE since # possible decisions less than 50")
     self.settings = default().update(**settings)
+    self.settings.candidates = int(min(self.settings.candidates, 0.5 * self.model.get_max_size() / self.settings.gens))
     seed(self.settings.seed)
     if self.settings.dominates == "bdom":
       self.dominates = self.bdom
@@ -216,27 +222,31 @@ class DE(O):
     stat.insert(population)
     [point.evaluate(self.model) for point in population]
     for i in range(self.settings.gens):
-      print("Generation : %d " % (i + 1))
-      clones = population[:]
+      self.print("Generation : %d " % (i + 1))
+      clones = set(population[:])
       for point in population:
         original_obj = point.evaluate(self.model)
-        mutant = self.mutate(point, clones)
+        mutant = self.mutate(point, population)
         mutated_obj = mutant.evaluate(self.model)
         if self.dominates(mutated_obj, original_obj) and (mutant not in self.global_set):
           clones.remove(point)
-          clones.append(mutant)
+          clones.add(mutant)
           self.global_set.add(mutant)
-      population = clones
+      population = list(clones)
       stat.insert(population)
     stat.runtime = time.time() - start
     return stat
 
+  def print(self, message):
+    if self.settings.verbose:
+      print(message)
 
-def _pareto_test(model_name):
+
+def _pareto_test(model_name, **settings):
   from language.parser import Parser
   mdl = Parser.from_file("models/%s.str" % model_name)
   obj_ids = mdl.objectives.keys()
-  de = DE(mdl)
+  de = DE(mdl, **settings)
   stat = de.run()
   gens_obj_start = stat.get_objectives(0, obj_ids)
   gens_obj_end = stat.get_objectives(-1, obj_ids)
@@ -246,4 +256,6 @@ def _pareto_test(model_name):
 
 
 if __name__ == "__main__":
-  _pareto_test("BSPDM")
+  _pareto_test("SAS", candidates=10)
+  _pareto_test("AOWS")
+  _pareto_test("ECS")

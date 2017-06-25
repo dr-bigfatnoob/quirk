@@ -14,9 +14,9 @@ def plot_pareto(generations, colors, markers, labels, x_label, y_label, title, f
   for i in xrange(len(generations)):
     gen = generations[i]
     x_axis, y_axis = [], []
-    for x_i, y_i in gen:
-       x_axis.append(x_i)
-       y_axis.append(y_i)
+    for j in xrange(len(gen)):
+       x_axis.append(gen[j][0])
+       y_axis.append(gen[j][1])
     plt.plot(x_axis, y_axis, color=colors[i], marker=markers[i], label=labels[i], linestyle='')
   plt.xlabel(x_label)
   plt.ylabel(y_label)

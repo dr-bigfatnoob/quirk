@@ -1,6 +1,8 @@
 from __future__ import print_function, division
-import sys
+
 import os
+import sys
+
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
 
@@ -8,9 +10,9 @@ __author__ = "bigfatnoob"
 
 from language.grammar import grammar
 from parsimonious.nodes import NodeVisitor
-from template import Model, O, Decision
+from language.template import Model, O, Decision
 from utils.lib import MAXIMIZE, MINIMIZE
-from functions import evaluations, distributions, operations
+from language.functions import evaluations, distributions, operations
 
 _max = "Max"
 _min = "Min"
