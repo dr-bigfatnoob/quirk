@@ -89,3 +89,6 @@ class Statistics(O):
         row.append(node.has()[key])
       tab.add_row(row)
     print(tab)
+
+  def get_objectives(self, index, obj_ids):
+    return [[point.objectives[obj_id] for obj_id in obj_ids] for point in self.generations[index]]

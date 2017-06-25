@@ -11,6 +11,7 @@ import random
 from collections import OrderedDict
 from utils.stats import Statistics
 import time
+import plotter
 
 
 def default():
@@ -202,7 +203,6 @@ class DE(O):
         mutant_decisions[key] = point.decisions[key]
     return Point(mutant_decisions)
 
-
   def run(self):
     """
     DE runner
@@ -232,11 +232,18 @@ class DE(O):
     return stat
 
 
-def _main():
+def _pareto_test(model_name):
   from language.parser import Parser
-  mdl = Parser.from_file("models/AOWS.str")
+  mdl = Parser.from_file("models/%s.str" % model_name)
+  obj_ids = mdl.objectives.keys()
   de = DE(mdl)
-  de.run()
+  stat = de.run()
+  gens_obj_start = stat.get_objectives(0, obj_ids)
+  gens_obj_end = stat.get_objectives(-1, obj_ids)
+  plotter.plot_pareto([gens_obj_start, gens_obj_end], ['red', 'green'], ['x', 'o'],
+                      ['first', 'last'], obj_ids[0], obj_ids[1], 'Pareto Front',
+                      'figs/%s_pareto.png' % model_name)
+
 
 if __name__ == "__main__":
-  _main()
+  _pareto_test("BSPDM")
