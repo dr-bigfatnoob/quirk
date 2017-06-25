@@ -276,6 +276,34 @@ class Model(O):
       objs[key] = objective.value
     return objs
 
+  def evaluate_constraints(self, solution):
+    return True, 0
+
+  def bdom(self, obj1, obj2):
+    """
+    Binary Domination
+    :param obj1: Objective 1
+    :param obj2: Objective 2
+    :return: Check objective 1 dominates objective 2
+    """
+    at_least = False
+    for i in self.objectives.keys():
+      a, b = obj1[i], obj2[i]
+      if self.objectives[i].direction.better(a, b):
+        at_least = True
+      elif a == b:
+        continue
+      else:
+        return False
+    return at_least
+
+  def better(self, obj1, obj2):
+    if self.bdom(obj1, obj2):
+      return 1
+    elif self.bdom(obj2, obj1):
+      return 2
+    return 0
+
   def initialize(self):
     for inp in self.inputs.values():
       inp.generate(self.sample_size)

@@ -215,6 +215,7 @@ class DE(O):
     :return:
     """
     # settings = self.settings
+    self.print("Optimizing using DE ... ")
     stat = Statistics()
     start = time.time()
     self.model.initialize()
@@ -222,7 +223,7 @@ class DE(O):
     stat.insert(population)
     [point.evaluate(self.model) for point in population]
     for i in range(self.settings.gens):
-      self.print("Generation : %d " % (i + 1))
+      self.print("Generation : %d ... " % (i + 1))
       clones = set(population[:])
       for point in population:
         original_obj = point.evaluate(self.model)
