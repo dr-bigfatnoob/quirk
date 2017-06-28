@@ -220,8 +220,8 @@ class DE(O):
     start = time.time()
     self.model.initialize()
     population = self.populate(self.settings.candidates)
-    stat.insert(population)
     [point.evaluate(self.model) for point in population]
+    stat.insert(population)
     for i in range(self.settings.gens):
       self.print("Generation : %d ... " % (i + 1))
       clones = set(population[:])
@@ -253,7 +253,7 @@ def _pareto_test(model_name, **settings):
   gens_obj_end = stat.get_objectives(-1, obj_ids)
   plotter.plot_pareto([gens_obj_start, gens_obj_end], ['red', 'green'], ['x', 'o'],
                       ['first', 'last'], obj_ids[0], obj_ids[1], 'Pareto Front',
-                      'figs/%s_pareto.png' % model_name)
+                      'results/pareto/%s_pareto.png' % model_name)
 
 
 if __name__ == "__main__":

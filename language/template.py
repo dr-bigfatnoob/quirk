@@ -239,19 +239,41 @@ class Model(O):
       lst = [len(value.options) for value in self.decisions.values()]
     return reduce(mul, lst, 1)
 
+  def get_decisions(self):
+    if self.decision_map:
+      return self.decision_map
+    else:
+      return {d.name: [o.name for o in d.options.values()] for d in self.decisions.values()}
+
+  def get_decision_name(self, key):
+    name = self.decisions[key].key
+    if name is None:
+      name = self.decisions[key].name
+    return name
+
+  def get_decision_value(self, value):
+    value = self.nodes[value].has()["label"]
+    if value is None:
+      value = self.nodes[value].name
+    return value
+
   def print_solution(self, solution):
     print("Solution:")
     dic = OrderedDict()
     for key, value in solution.items():
-      name = self.decisions[key].key
-      value = self.nodes[value].has()["label"]
-      if name is None:
-        name = self.decisions[key].name
-      if value is None:
-        value = self.nodes[value].name
+      name = self.get_decision_name(key)
+      value = self.get_decision_value(value)
       dic[name] = value
     for name, value in dic.items():
       print("\t name: %s, value: %s" % (name, value))
+
+  def get_solution(self, solution):
+    dic = OrderedDict()
+    for key, value in solution.items():
+      name = self.get_decision_name(key)
+      value = self.get_decision_value(value)
+      dic[name] = value
+    return dic
 
   def populate(self, size):
     max_size = self.get_max_size()

@@ -17,6 +17,7 @@ def gt(a, b):
   """
   return a > b
 
+
 def lt(a, b):
   """
   True if a < b
@@ -25,6 +26,7 @@ def lt(a, b):
   :return:
   """
   return a < b
+
 
 def gte(a, b):
   """
@@ -35,6 +37,7 @@ def gte(a, b):
   """
   return a >= b
 
+
 def lte(a, b):
   """
   True if a <= b
@@ -43,6 +46,7 @@ def lte(a, b):
   :return:
   """
   return a <= b
+
 
 def eq(a, b):
   """
@@ -53,6 +57,7 @@ def eq(a, b):
   """
   return a == b
 
+
 def neq(a, b):
   """
   True if a != b
@@ -61,6 +66,7 @@ def neq(a, b):
   :return:
   """
   return a != b
+
 
 def np_to_list(a):
   """
@@ -72,25 +78,33 @@ def np_to_list(a):
 
 
 class O:
-  def __init__(self,**d): self.has().update(**d)
-  def has(self): return self.__dict__
-  def update(self,**d): self.has().update(d); return self
-  def __repr__(self)   :
+  def __init__(self, **d): self.has().update(**d)
+
+  def has(self):
+    return self.__dict__
+
+  def update(self, **d):
+    self.has().update(d)
+    return self
+
+  def __repr__(self):
     def _name(val):
       if isinstance(val, list):
         return [_name(v) for v in val]
       if hasattr(val, '__call__'):
         return val.__name__
       return val
-    show=[':%s %s' % (k,_name(self.has()[k]))
-      for k in sorted(self.has().keys() )
-      if k[0] is not "_"]
+    show = [':%s %s' % (k,_name(self.has()[k]))
+            for k in sorted(self.has().keys())
+            if k[0] is not "_"]
     txt = ' '.join(show)
     if len(txt) > 60:
-      show=map(lambda x: '\t'+x+'\n',show)
-    return '{'+' '.join(show)+'}'
+      show = map(lambda x: '\t' + x + '\n', show)
+    return '{' + ' '.join(show) + '}'
+
   def __getitem__(self, item):
     return self.has().get(item)
+
   def clone(self):
     cloned = O()
     for key, val in self.has().iteritems():
@@ -108,3 +122,20 @@ class Direction(O):
 
 MINIMIZE = Direction("min", lt, gte)
 MAXIMIZE = Direction("max", gt, lte)
+
+
+def mkdir(directory):
+  """
+  Implements the "mkdir" linux function
+  :param directory:
+  :return:
+  """
+  if directory and not os.path.exists(directory):
+    os.makedirs(directory)
+
+
+def save_file(obj, file_name):
+  directory = file_name.rsplit("/", 1)[0]
+  mkdir(directory)
+  with open(file_name, "wb") as f:
+    f.write(obj)
