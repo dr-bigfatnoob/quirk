@@ -9,10 +9,9 @@ sys.dont_write_bytecode = True
 __author__ = "bigfatnoob"
 
 from utils.lib import O
-import random
-from collections import OrderedDict
 from utils.stats import Statistics
 import time
+from technix.tech_utils import Point, seed
 from utils import plotter
 
 
@@ -36,68 +35,8 @@ def default():
   )
 
 
-def seed(val=None):
-  random.seed(val)
-
-
-def choice(lst):
-  return random.choice(lst)
-
-
-class Point(O):
-  id = 0
-
-  def __init__(self, decisions, objectives=None):
-    """
-    Point in the optimizer
-    :param decisions: Ordered Dictionary of decisions
-    :param objectives: Ordered Dictionary of objectives
-    """
-    O.__init__(self)
-    Point.id += 1
-    self.id = Point.id
-    self.decisions = decisions
-    self.objectives = objectives
-    # Attributes for NSGA2
-    self.dominating = 0
-    self.dominated = []
-    self.crowd_dist = 0
-
-  def __hash__(self):
-    """
-    Hash Function
-    :return:
-    """
-    decs = self.decisions.items() if type(self.decisions) == dict or type(self.decisions) == OrderedDict \
-        else self.decisions
-    objs = self.objectives.items() if type(self.objectives) == dict or type(self.objectives) == OrderedDict \
-        else self.objectives
-    hashed = hash(frozenset(decs))
-    if objs is not None:
-      hashed += hash(frozenset(objs))
-    return hashed
-
-  def __eq__(self, other):
-    """
-    Equality check
-    :param other:
-    :return:
-    """
-    return cmp(self.decisions, other.decisions) == 0 and self.objectives == other.objectives
-
-  def evaluate(self, model):
-    """
-    Evaluate the objectives of the point
-    :param model: Model against which evaluation is performed.
-    :return:
-    """
-    if not self.objectives:
-      self.objectives = model.evaluate(self.decisions)
-    return self.objectives
-
-
 class DE(O):
-  def __init__(self, model, **settings):
+  def __init__(self, model, mutator, **settings):
     """
     Initialize a DE optimizer
     :param model: Model to be optimized
@@ -109,6 +48,7 @@ class DE(O):
       raise Exception("Cannot run DE since # possible decisions less than 50")
     self.settings = default().update(**settings)
     self.settings.candidates = int(min(self.settings.candidates, 0.5 * self.model.get_max_size() / self.settings.gens))
+    self.mutator = mutator(self.model, cr=self.settings.cr, f=self.settings.f)
     seed(self.settings.seed)
     if self.settings.dominates == "bdom":
       self.dominates = self.bdom
@@ -148,26 +88,6 @@ class DE(O):
         self.global_set.add(point)
     return list(population)
 
-  @staticmethod
-  def three_others(one, pop):
-    """
-    Return three other points from population
-    :param one: Point not to consider
-    :param pop: Population to look in
-    :return: two, three, four
-    """
-    def one_other():
-      while True:
-        x = choice(pop)
-        if x.id not in seen:
-          seen.append(x.id)
-          return x
-    seen = [one.id]
-    two = one_other()
-    three = one_other()
-    four = one_other()
-    return two, three, four
-
   def mutate(self, point, population):
     """
     Mutate point against the population
@@ -177,37 +97,11 @@ class DE(O):
     """
     # TODO: Implement DE binary mutation
     if self.settings.mutate == "random":
-      return self.mutate_random(point, population)
+      return self.mutator.mutate_random(point, population)
     elif self.settings.mutate == "binary":
-      return self.mutate_binary(point, population)
+      return self.mutator.mutate_binary(point, population)
     else:
       raise Exception("Invalid mutation setting %s" % self.settings.mutate)
-
-  def mutate_random(self, point, population):
-    """
-    Just another random point
-    :param point:
-    :param population:
-    :return:
-    """
-    other = Point(self.model.generate())
-    other.evaluate(self.model)
-    while other in population or other == point:
-      other = Point(self.model.generate())
-      other.evaluate(self.model)
-    return other
-
-  def mutate_binary(self, point, population):
-    two, three, four = DE.three_others(point, population)
-    random_key = choice(self.model.decisions.keys())
-    mutant_decisions = OrderedDict()
-    for key in self.model.decisions.keys():
-      r = random.random()
-      if r < self.settings.cr or key == random_key:
-        mutant_decisions[key] = random.choice([two.decisions[key], three.decisions[key], four.decisions[key]])
-      else:
-        mutant_decisions[key] = point.decisions[key]
-    return Point(mutant_decisions)
 
   def run(self):
     """
@@ -243,11 +137,12 @@ class DE(O):
       print(message)
 
 
-def _pareto_test(model_name, **settings):
+def _pareto_quirk_test(model_name, **settings):
   from language.parser import Parser
-  mdl = Parser.from_file("models/%s.str" % model_name)
+  from language.mutator import Mutator
+  mdl = Parser.from_file("models/quirk/%s.str" % model_name)
   obj_ids = mdl.objectives.keys()
-  de = DE(mdl, **settings)
+  de = DE(mdl, Mutator, **settings)
   stat = de.run()
   gens_obj_start = stat.get_objectives(0, obj_ids)
   gens_obj_end = stat.get_objectives(-1, obj_ids)
@@ -256,7 +151,23 @@ def _pareto_test(model_name, **settings):
                       'results/pareto/%s_pareto.png' % model_name)
 
 
+def _pareto_xomo_test():
+  from models.xomo.xomo import Model
+  from models.xomo.mutator import Mutator
+  mdl = Model()
+  obj_ids = mdl.objectives.keys()
+  de = DE(mdl, Mutator)
+  stat = de.run()
+  gens_obj_start = stat.get_objectives(0, obj_ids)
+  gens_obj_end = stat.get_objectives(-1, obj_ids)
+  plotter.plot_pareto([gens_obj_start, gens_obj_end], ['red', 'green'], ['x', 'o'],
+                      ['first', 'last'], obj_ids[0], obj_ids[1], 'Pareto Front',
+                      'results/pareto/%s_pareto.png' % mdl.name)
+
+
 if __name__ == "__main__":
-  _pareto_test("SAS", candidates=10)
-  _pareto_test("AOWS")
-  _pareto_test("ECS")
+  _pareto_xomo_test()
+  exit()
+  _pareto_quirk_test("SAS", candidates=10)
+  _pareto_quirk_test("AOWS")
+  _pareto_quirk_test("ECS")

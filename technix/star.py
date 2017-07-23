@@ -3,10 +3,9 @@ import sys
 import os
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
-from collections import OrderedDict
 import numpy as np
 from utils.lib import O, save_file
-from technix.de import DE, Point
+from technix.de import DE
 from technix import nsga
 from utils import plotter
 from prettytable import PrettyTable
@@ -26,21 +25,12 @@ def default():
 def med_iqr(lst):
   return np.median(lst), np.percentile(lst, 75) - np.percentile(lst, 25)
 
-
-class StarPoint(O):
-  def __init__(self, **params):
-    O.__init__(self, **params)
-
-  def __hash__(self):
-    return hash(self.id)
-
-
 class Star(O):
-  def __init__(self, model, **settings):
+  def __init__(self, model, mutator, **settings):
     O.__init__(self)
     self.model = model
     self.settings = default().update(**settings)
-    self.de = DE(model, gens=self.settings.k1)
+    self.de = DE(model, mutator, gens=self.settings.k1)
 
   def plot_pareto(self, stat):
     obj_ids = self.model.objectives.keys()
@@ -63,58 +53,7 @@ class Star(O):
 
   def rank(self, best, rest):
     print("Ranking ... ")
-    best_size = len(best)
-    rest_size = len(rest)
-    p_best = best_size / (best_size + rest_size)
-    p_rest = rest_size / (best_size + rest_size)
-    decisions = []
-    best_sols = [self.model.get_solution(sol.decisions) for sol in best]
-    rest_sols = [self.model.get_solution(sol.decisions) for sol in rest]
-    for d_id, values in self.model.get_decisions().items():
-      # Implement Ranks
-      best_scores = {v: 0 for v in values}
-      for point in best_sols:
-        # best_scores[self.model.nodes[point.decisions[d_id]].label] += 1
-        best_scores[point[d_id]] += 1
-      rest_scores = {v: 0 for v in values}
-      for point in rest_sols:
-        rest_scores[point[d_id]] += 1
-      for key in best_scores.keys():
-        l_best = best_scores[key] * p_best / len(best_sols)
-        l_rest = rest_scores[key] * p_rest / len(rest_sols)
-        sup = 0 if l_best == l_rest == 0 else l_best ** 2 / (l_best + l_rest)
-        decisions.append(StarPoint(support=sup,
-                                   value=key,
-                                   name=d_id))
-    decisions.sort(key=lambda x: x.support, reverse=True)
-    ranked, aux = [], set()
-    for dec in decisions:
-      if dec.name not in aux:
-        ranked.append(dec)
-        aux.add(dec.name)
-    assert len(ranked) == len(self.model.get_decisions()), "Mismatch after sorting support"
-    return ranked
-
-  def generate(self, presets):
-    pop = []
-    while len(pop) < self.settings.k2:
-      solutions = OrderedDict()
-      model = self.model
-      if model.decision_map:
-        ref = {key: np.random.choice(vals) for key, vals in model.decision_map.items()}
-        for key, decision in model.decisions.items():
-          if decision.key in presets:
-            solutions[key] = decision.options[presets[decision.key]].id
-          else:
-            solutions[key] = decision.options[ref[decision.key]].id
-      else:
-        for key, decision in model.decisions.items():
-          if key in presets:
-            solutions[key] = decision.options[presets[key]].id
-          else:
-            solutions[key] = np.random.choice(decision.options.values()).id
-      pop.append(Point(solutions))
-    return pop
+    return self.de.mutator.decision_ranker(best, rest)
 
   def objective_stats(self, generations):
     stats = {}
@@ -141,7 +80,7 @@ class Star(O):
     gens = []
     for i in xrange(len(supports) + 1):
       presets = {sup.name: sup.value for sup in supports[:i]}
-      population = self.generate(presets)
+      population = self.de.mutator.generate(presets, self.settings.k2)
       [point.evaluate(self.model) for point in population]
       gens.append(population)
     obj_stats, objective_map = self.objective_stats(gens)
@@ -172,11 +111,12 @@ def print_decisions(decisions, file_name=None):
     print("```")
 
 
-def run(model_name):
+def run_quirk(model_name):
   from language.parser import Parser
-  mdl = Parser.from_file("models/%s.str" % model_name)
+  from language.mutator import Mutator
+  mdl = Parser.from_file("models/quirk/%s.str" % model_name)
   print("MODEL : %s" % mdl.name)
-  star = Star(mdl)
+  star = Star(mdl, Mutator)
   best, rest = star.sample()
   ranked = star.rank(best, rest)
   print_decisions(ranked, "results/models/%s/top_decisions.md" % mdl.name)
@@ -184,10 +124,20 @@ def run(model_name):
   star.report(obj_stats, "results/models/%s/star.png" % mdl.name)
 
 
+def run_xomo():
+  from models.xomo.xomo import Model
+  from models.xomo.mutator import Mutator
+  mdl = Model()
+  star = Star(mdl, Mutator)
+  best, rest = star.sample()
+  ranked = star.rank(best, rest)
+  print_decisions(ranked, "results/models/%s/top_decisions.md" % mdl.name)
+  obj_stats, gens, objective_map = star.prune(ranked)
+  star.report(obj_stats, "results/models/%s/star.png" % mdl.name)
+
 if __name__ == "__main__":
-  run("ECS")
-  run("AOWS")
-  run("SAS")
-
-
-
+  run_xomo()
+  exit()
+  run_quirk("ECS")
+  run_quirk("AOWS")
+  run_quirk("SAS")
