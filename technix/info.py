@@ -47,7 +47,6 @@ def evppi(samples, param_distribution, direction):
           seg_points.append(seg_point)
 
   score = 0
-  print(len(seg_points))
   if len(seg_points) > 0:
     quick_sort_vector_pivot(seg_points)
     seg_points2 = np.unique([-1] + seg_points + [n - 1])

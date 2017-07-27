@@ -138,6 +138,7 @@ class DE(O):
 
 
 def _pareto_quirk_test(model_name, **settings):
+  print("# %s" % model_name)
   from language.parser import Parser
   from language.mutator import Mutator
   mdl = Parser.from_file("models/quirk/%s.str" % model_name)
@@ -152,12 +153,12 @@ def _pareto_quirk_test(model_name, **settings):
   evtpi_index = 0
   direction = mdl.objectives[obj_ids[evtpi_index]].direction
   samples = stat.get_objective_samples(-1, obj_ids[evtpi_index])
-  print("# EVPPI")
+  print("## EVPPI")
   for par in mdl.get_parameters():
     evppi = info.evppi(samples, par.get_samples(), direction)
     if evppi is not None:
-      print(par.name, evppi)
-  print("# EVTPI : ", info.evtpi(samples, direction))
+      print("*", par.name, evppi)
+  print("## EVTPI : ", info.evtpi(samples, direction))
 
 
 def _pareto_xomo_test():
@@ -176,6 +177,6 @@ def _pareto_xomo_test():
 
 if __name__ == "__main__":
   # _pareto_xomo_test()
-  _pareto_quirk_test("SAS", candidates=10, gens=50)
-  _pareto_quirk_test("AOWS")
+  # _pareto_quirk_test("SAS", candidates=10, gens=50)
+  # _pareto_quirk_test("AOWS")
   _pareto_quirk_test("ECS")
