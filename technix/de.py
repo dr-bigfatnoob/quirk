@@ -15,6 +15,7 @@ from technix.tech_utils import Point, seed
 from utils import plotter
 from technix import info
 
+
 def default():
   """
   Default settings.
@@ -150,15 +151,12 @@ def _pareto_quirk_test(model_name, **settings):
   plotter.plot_pareto([gens_obj_start, gens_obj_end], ['red', 'green'], ['x', 'o'],
                       ['first', 'last'], obj_ids[0], obj_ids[1], 'Pareto Front',
                       'results/pareto/%s_pareto.png' % model_name)
+
   evtpi_index = 0
   direction = mdl.objectives[obj_ids[evtpi_index]].direction
   samples = stat.get_objective_samples(-1, obj_ids[evtpi_index])
-  print("## EVPPI")
-  for par in mdl.get_parameters():
-    evppi = info.evppi(samples, par.get_samples(), direction)
-    if evppi is not None:
-      print("*", par.name, evppi)
-  print("## EVTPI : ", info.evtpi(samples, direction))
+  info.save_info(samples, mdl.get_parameters(), direction,
+                 "results/models/%s/info_%s.md" % (model_name, mdl.objectives[obj_ids[evtpi_index]].name))
 
 
 def _pareto_xomo_test():

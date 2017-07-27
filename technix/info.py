@@ -5,9 +5,19 @@ sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
 from utils.lib import MAXIMIZE
 import numpy as np
-from copy import deepcopy
 
 __author__ = "bigfatnoob"
+
+
+def save_info(samples, params, direction, file_name):
+  out = "## EVPPI\n"
+  for par in params:
+    score = evppi(samples, par.get_samples(), direction)
+    if score is not None:
+      out += "* %s %f\n" % (par.name, score)
+  out += "\n## EVTPI : %f\n" % evtpi(samples, direction)
+  with open(file_name, "wb") as f:
+    f.write(out)
 
 
 def evtpi(samples, direction):
@@ -43,7 +53,7 @@ def evppi(samples, param_distribution, direction):
           seg_point = u
         else:
           seg_point = l
-        if seg_point > 0 and seg_point < n - 1:
+        if 0 < seg_point < n - 1:
           seg_points.append(seg_point)
 
   score = 0
