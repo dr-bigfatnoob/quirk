@@ -152,6 +152,7 @@ def _pareto_quirk_test(model_name, **settings):
   evtpi_index = 0
   direction = mdl.objectives[obj_ids[evtpi_index]].direction
   samples = stat.get_objective_samples(-1, obj_ids[evtpi_index])
+  print("# EVPPI")
   for par in mdl.get_parameters():
     evppi = info.evppi(samples, par.get_samples(), direction)
     if evppi is not None:

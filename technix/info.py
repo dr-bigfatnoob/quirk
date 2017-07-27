@@ -23,7 +23,7 @@ def evtpi(samples, direction):
 
 def evppi(samples, param_distribution, direction):
   if min(param_distribution) == max(param_distribution):
-    print("Deterministic Distribution")
+    # print("Deterministic Distribution")
     return None
   assert(len(param_distribution) == len(samples[0]))
   samps = np.asarray([s[:] for s in samples])
@@ -33,8 +33,8 @@ def evppi(samples, param_distribution, direction):
   quick_sort_pivot(dist, samps)
   n_segs = np.ones((d, d), dtype=np.int)
   seg_points = []
-  for i in xrange(d-1):
-    for j in xrange(i+1, d):
+  for i in xrange(d - 1):
+    for j in xrange(i + 1, d):
       cm = np.cumsum(samps[i] - samps[j]) / n
       if n_segs[i][j] == 1:
         l = np.argmin(cm)
