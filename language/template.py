@@ -45,7 +45,7 @@ class Node(Component):
     return np.asarray([op(a_i, b_i) for a_i, b_i in zip(a, b)])
 
   def __init__(self, **kwargs):
-    self.samples = []
+    self._samples = []
     self.children = []
     self.operation = None
     Component.__init__(self, **kwargs)
@@ -80,6 +80,8 @@ class Node(Component):
   def clone(self):
     return deepcopy(self)
 
+  def get_samples(self):
+    return self._samples
 
 class Decision(Node):
   """
@@ -94,11 +96,11 @@ class Decision(Node):
 
   def clear(self):
     self.value = None
-    self.samples = None
+    self._samples = None
 
   def evaluate(self):
-    self.samples = self.value.evaluate()
-    return self.samples
+    self._samples = self.value.evaluate()
+    return self._samples
 
 
 class Objective(Node):
@@ -113,11 +115,11 @@ class Objective(Node):
 
   def clear(self):
     self.value = None
-    self.samples = None
+    self._samples = None
 
   def evaluate(self):
-    self.samples = self.children[0].evaluate()
-    self.value = self.eval(self.samples)
+    self._samples = self.children[0].evaluate()
+    self.value = self.eval(self._samples)
     return self.value
 
 
@@ -131,12 +133,12 @@ class Input(Node):
     Node.__init__(self)
 
   def generate(self, size):
-    if not self.samples or len(self.samples) != size:
-      self.samples = self.distribution.sample(size)
-    return self.samples
+    if not self._samples or len(self._samples) != size:
+      self._samples = self.distribution.sample(size)
+    return self._samples
 
   def evaluate(self):
-    return self.samples
+    return self._samples
 
 
 class Variable(Node):
@@ -145,13 +147,13 @@ class Variable(Node):
 
   def evaluate(self):
     children = self.children
-    self.samples = children[0].evaluate()
+    self._samples = children[0].evaluate()
     if len(children) > 1:
       for child in children[1:]:
-        self.samples = Node.agg(self.samples, child.evaluate(), self.operation)
+        self._samples = Node.agg(self._samples, child.evaluate(), self.operation)
     else:
-      self.samples = [self.operation(s) for s in self.samples]
-    return self.samples
+      self._samples = [self.operation(s) for s in self._samples]
+    return self._samples
 
 
 class Edge(Component):
@@ -163,7 +165,7 @@ class Edge(Component):
 
 
 def same(node):
-  return node.children[0].samples
+  return node.children[0].get_samples()
 
 
 class Model(O):
@@ -232,6 +234,13 @@ class Model(O):
         solutions[key] = np.random.choice(decision.options.values()).id
     return solutions
 
+  def get_parameters(self):
+    parameters = []
+    for node in self.nodes.values():
+      if isinstance(node, Input):
+        parameters.append(node)
+    return parameters
+
   def get_max_size(self):
     if self.decision_map:
       lst = [len(vals) for vals in self.decision_map.values()]
@@ -295,7 +304,7 @@ class Model(O):
     objs = OrderedDict()
     for key, objective in self.objectives.items():
       objective.evaluate()
-      objs[key] = objective.value
+      objs[key] = O(id=objective.id, value=objective.value, _samples=objective.get_samples()[:])
     return objs
 
   def evaluate_constraints(self, solution):

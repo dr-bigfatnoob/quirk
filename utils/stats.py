@@ -91,4 +91,16 @@ class Statistics(O):
     print(tab)
 
   def get_objectives(self, index, obj_ids):
-    return [[point.objectives[obj_id] for obj_id in obj_ids] for point in self.generations[index]]
+    return [[point.objectives[obj_id]
+             if isinstance(point.objectives[obj_id], int) else point.objectives[obj_id].value
+             for obj_id in obj_ids] for point in self.generations[index]]
+
+  def get_objectives_samples(self, index, obj_ids):
+    return [[[point.objectives[obj_id]]
+             if isinstance(point.objectives[obj_id], int) else point.objectives[obj_id].has()['_samples'].tolist()
+             for obj_id in obj_ids] for point in self.generations[index]]
+
+  def get_objective_samples(self, index, obj_id):
+    return [[point.objectives[obj_id]]
+            if isinstance(point.objectives[obj_id], int) else point.objectives[obj_id].has()['_samples'].tolist()
+            for point in self.generations[index]]

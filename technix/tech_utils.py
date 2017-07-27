@@ -45,11 +45,9 @@ class Point(O):
     """
     decs = self.decisions.items() if type(self.decisions) == dict or type(self.decisions) == OrderedDict \
         else self.decisions
-    objs = self.objectives.items() if type(self.objectives) == dict or type(self.objectives) == OrderedDict \
-        else self.objectives
     hashed = hash(frozenset(decs))
-    if objs is not None:
-      hashed += hash(frozenset(objs))
+    if self.objectives is not None:
+      hashed += hash(frozenset(self.get_obj_values()))
     return hashed
 
   def __eq__(self, other):
@@ -68,7 +66,18 @@ class Point(O):
     """
     if not self.objectives:
       self.objectives = model.evaluate(self.decisions)
-    return self.objectives
+    return self.get_obj_values()
+
+  def get_obj_values(self):
+    if not self.objectives:
+      return None
+    values = OrderedDict()
+    for key, obj in self.objectives.items():
+      if isinstance(obj, int):
+        values[key] = obj
+      else:
+        values[key] = obj.value
+    return values
 
 
 def three_others(one, pop):
