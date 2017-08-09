@@ -3,6 +3,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
+import random
 
 __author__ = "bigfatnoob"
 
@@ -91,12 +92,14 @@ def domination(model, one, two):
     # Return 2, if 2 satisfies the constraints
     return 2
   # both fail the constraints
-  elif one_offset <= two_offset:
+  elif one_offset < two_offset:
     # one has a lesser offset deviation
     return 1
-  else:
+  elif one_offset > two_offset:
     # two has a lesser offset deviation
     return 2
+  else:
+    return random.choice([1, 2])
 
 
 def assign_crowd_dist(model, frontier):
@@ -112,7 +115,7 @@ def assign_crowd_dist(model, frontier):
     down = min(vals)
     frontier[0].crowd_dist = float("inf")
     frontier[-1].crowd_dist = float("inf")
-    for i in range(1, l-1):
+    for i in range(1, l - 1):
       frontier[i].crowd_dist += (normalize(frontier[i + 1].objectives[m], up, down) -
                                  normalize(frontier[i - 1].objectives[m], up, down))
   return frontier
@@ -126,10 +129,11 @@ def normalize(val, up, down):
 
 def _main(model_name):
   from language.parser import Parser
+  from language.mutator import Mutator
   from technix.de import DE
   mdl = Parser.from_file("models/%s.str" % model_name)
   mdl.initialize()
-  de = DE(mdl)
+  de = DE(mdl, Mutator)
   pop = de.populate(10)
   [point.evaluate(mdl) for point in pop]
   pop_sorted = select(mdl, pop, len(pop))
