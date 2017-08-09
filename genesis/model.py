@@ -123,6 +123,7 @@ class Model(O):
       graph.remove_edge(stmt.source, stmt.target)
     return graph, existing
 
+
   def evaluate_constraints(self, solution):
     """
     :param solution: Instance of graph
@@ -155,14 +156,6 @@ class Model(O):
       style = 'dashed' if edge[2]['relation'] == 'or' else 'solid'
       dot_graph.add_edge(dot.Edge(edge[0], edge[1], style=style))
     dot_graph.write(fig_name, format='png')
-
-
-def draw(statements, file_name):
-  graph = dot.Dot(graph_type='digraph', rankdir="BT")
-  for stmt in statements:
-    style = 'dashed' if stmt.relation == 'or' else 'solid'
-    graph.add_edge(dot.Edge(stmt.source, stmt.target, style=style))
-  graph.write(file_name, format='png')
 
 
 def test():
