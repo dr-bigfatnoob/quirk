@@ -83,6 +83,7 @@ class Node(Component):
   def get_samples(self):
     return self._samples
 
+
 class Decision(Node):
   """
   A Decision node.

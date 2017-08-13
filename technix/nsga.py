@@ -18,6 +18,7 @@ def loo(points):
 def select(model, population, k):
   if len(population) < k:
     return population
+  [point.evaluate(model) for point in population]
   fronts = sort_non_dominated(model, population)
   pop_next = []
   for i, front in enumerate(fronts):
