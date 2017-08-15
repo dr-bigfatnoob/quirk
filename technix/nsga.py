@@ -31,6 +31,10 @@ def select(model, population, k):
   return pop_next
 
 
+def evolve(model, population, is_domination=True):
+  # TODO: Use crossover and mutation
+  pass
+
 def sort_non_dominated(model, population):
   frontiers = []
   front1 = []

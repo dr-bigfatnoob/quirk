@@ -7,6 +7,8 @@ sys.dont_write_bytecode = True
 
 import networkx as nx
 from utils.lib import O
+import random
+import re
 
 __author__ = "bigfatnoob"
 
@@ -23,6 +25,69 @@ class Objective(O):
 
   def evaluate(self, graph):
     return self.evaluation(graph)
+
+
+def choice(seq):
+  if not seq:
+    return None
+  return random.sample(seq, 1)[0]
+
+
+class Statement(O):
+  Pattern = r'(\s*\w[\w\s\-]*)->(\s*\w[\w\s\-]*)->(\s*\w[\w\s\-]*)'
+
+  def __init__(self, source, relation, target):
+    """
+    source -> relation -> target
+    :param source: Source Node
+    :param relation: Relation between source and target
+    :param target: Target Node
+    """
+    O.__init__(self)
+    self.source = source.strip()
+    self.relation = relation.strip()
+    self.target = target.strip()
+
+  @staticmethod
+  def from_string(stmt):
+    groups = re.match(Statement.Pattern, stmt).groups()
+    if len(groups) == 3:
+      return Statement(*groups)
+    raise Exception("Invalid format: %s. \nLegal format: %s" % (stmt, "Source->Relation->Target"))
+
+  def __repr__(self):
+    return "%s -> %s -> %s" % (self.source, self.relation, self.target)
+
+  def __hash__(self):
+    return hash("%s;%s;%s" % (self.source, self.relation, self.target))
+
+  def __eq__(self, other):
+    if not other:
+      return False
+    return hash(self) == hash(other)
+
+
+class Vocabulary(O):
+  def __init__(self, nodes=None, edges=None):
+    """
+    Vocabulary of the graph
+    :param nodes: Set of all possible nodes
+    :param edges: Set of all possible edges
+    """
+    O.__init__(self)
+    self.nodes = set() if not nodes else nodes
+    self.edges = set() if not edges else edges
+
+  def add_stmt(self, stmt):
+    self.update_node(stmt.source)
+    self.update_edge(stmt.relation)
+    self.update_node(stmt.target)
+
+  def update_node(self, node):
+    self.nodes.add(node)
+
+  def update_edge(self, edge):
+    self.edges.add(edge)
 
 
 class GraphPoint(O):
@@ -60,3 +125,6 @@ class GraphPoint(O):
       print("EXCEPTION : \n%s" % e)
       model.draw(self)
       exit()
+
+  def clone(self):
+    return GraphPoint(self.decisions.copy())

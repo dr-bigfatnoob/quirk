@@ -4,14 +4,10 @@ import os
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
 
-import re
 import pydot as dot
 import networkx as nx
-import random
-from collections import OrderedDict
-from utils import lib
-from utils.lib import O
-from genesis.gen_utils import GraphPoint, Objective
+from utils.lib import O, MINIMIZE
+from genesis.gen_utils import GraphPoint, Objective, Vocabulary, Statement, choice
 
 
 __author__ = "bigfatnoob"
@@ -19,68 +15,10 @@ __author__ = "bigfatnoob"
 
 MODEL_SETTINGS = O(
   objs={obj.name: obj for obj in [
-    Objective("length", lib.MINIMIZE, GraphPoint.evaluate_length),
-    Objective("degree", lib.MINIMIZE, GraphPoint.evaluate_degree),
+    Objective("length", MINIMIZE, GraphPoint.evaluate_length),
+    Objective("degree", MINIMIZE, GraphPoint.evaluate_degree),
   ]}
 )
-
-
-def choice(seq):
-  if not seq:
-    return None
-  return random.sample(seq, 1)[0]
-
-
-class Statement(O):
-  Pattern = r'(\s*\w[\w\s\-]*)->(\s*\w[\w\s\-]*)->(\s*\w[\w\s\-]*)'
-
-  def __init__(self, source, relation, target):
-    """
-    source -> relation -> target
-    :param source: Source Node
-    :param relation: Relation between source and target
-    :param target: Target Node
-    """
-    O.__init__(self)
-    self.source = source.strip()
-    self.relation = relation.strip()
-    self.target = target.strip()
-
-  @staticmethod
-  def from_string(stmt):
-    groups = re.match(Statement.Pattern, stmt).groups()
-    if len(groups) == 3:
-      return Statement(*groups)
-    raise Exception("Invalid format: %s. \nLegal format: %s" % (stmt, "Source->Relation->Target"))
-
-  def __repr__(self):
-    return "%s -> %s -> %s" % (self.source, self.relation, self.target)
-
-  def __hash__(self):
-    return hash("%s;%s;%s" % (self.source, self.relation, self.target))
-
-
-class Vocabulary(O):
-  def __init__(self, nodes=None, edges=None):
-    """
-    Vocabulary of the graph
-    :param nodes: Set of all possible nodes
-    :param edges: Set of all possible edges
-    """
-    O.__init__(self)
-    self.nodes = set() if not nodes else nodes
-    self.edges = set() if not edges else edges
-
-  def add_stmt(self, stmt):
-    self.update_node(stmt.source)
-    self.update_edge(stmt.relation)
-    self.update_node(stmt.target)
-
-  def update_node(self, node):
-    self.nodes.add(node)
-
-  def update_edge(self, edge):
-    self.edges.add(edge)
 
 
 class Model(O):
@@ -104,16 +42,38 @@ class Model(O):
         self.negatives.add(example)
 
   @staticmethod
-  def _cycle_exists(graph):
+  def cycle_exists(graph):
     try:
-      # return len(nx.find_cycle(graph, graph.nodes())) > 0
       return len(list(nx.simple_cycles(graph))) > 0
     except nx.exception.NetworkXNoCycle:
       return False
 
+  @staticmethod
+  def _check_edge_consistency(graph):
+    nodes = graph.nodes()
+    for node in nodes:
+      in_edges = graph.in_edges([node], data=True)
+      if in_edges:
+        relations = set([edge[2]['relation'] for edge in in_edges])
+        if len(relations) != 1:
+          return False
+    return True
+
+  def _check_edges_validity(self, graph):
+    for pos in self.positives:
+      edge = graph.get_edge_data(pos.source, pos.target)
+      if not edge or edge['relation'] != pos.relation:
+        return False
+    for neg in self.negatives:
+      edge = graph.get_edge_data(neg.source, neg.target)
+      if edge and edge['relation'] == neg.relation:
+        self.draw(GraphPoint(graph))
+        return False
+    return True
+
   def _create_edge(self, graph, existing):
     stmt = None
-    while stmt is None or str(stmt) in existing:
+    while stmt is None or stmt in existing:
       target = choice(self.vocabulary.nodes)
       in_edges = graph.in_edges([target], data=True)
       if in_edges:
@@ -131,7 +91,7 @@ class Model(O):
       else:
         stmt = Statement(source, relation, target)
     graph.add_edge(stmt.source, stmt.target, relation=stmt.relation)
-    if not self._cycle_exists(graph):
+    if not self.cycle_exists(graph):
       existing.add(stmt)
     else:
       graph.remove_edge(stmt.source, stmt.target)
@@ -142,24 +102,33 @@ class Model(O):
     :param solution: Instance of graph
     :return:
     """
-    return not self._cycle_exists(solution), 0
+    return self._check_edge_consistency(solution) and self._check_edge_consistency(solution) and not \
+        self.cycle_exists(solution), 0
 
   def generate(self):
+    """
+    Generate an instance of GraphPoint
+    :return:
+    """
     graph = nx.DiGraph()
     graph.add_nodes_from(self.vocabulary.nodes)
     for stmt in self.positives:
       graph.add_edge(stmt.source, stmt.target, relation=stmt.relation)
-    existing = set([str(stmt) for stmt in self.positives] + [str(stmt) for stmt in self.negatives])
-    existing.update()
+    existing = set(list(self.positives) + list(self.negatives))
     while not nx.is_weakly_connected(graph):
       graph, existing = self._create_edge(graph, existing)
     return GraphPoint(graph)
 
   def populate(self, size):
+    """
+    Populate a list of GraphPoints
+    :param size: size of population
+    :return:
+    """
     population = set()
     while len(population) < size:
       point = self.generate()
-      if not self._cycle_exists(point.decisions):
+      if not self.cycle_exists(point.decisions):
        population.add(self.generate())
     return list(population)
 
@@ -182,6 +151,12 @@ class Model(O):
     return at_least
 
   def better(self, obj1, obj2):
+    """
+    Check if obj1 dominates obj2
+    :param obj1: Objectives of point1
+    :param obj2: Objectives of point2
+    :return: if obj1 dominates obj2 return 1 elseif obj2 dominates obj1 return 2 else 0
+    """
     if self.bdom(obj1, obj2):
       return 1
     elif self.bdom(obj2, obj1):
@@ -236,9 +211,31 @@ def test_nsga():
   model.draw(pop[-1], "genesis/temp_last.png")
 
 
+def test_check_mutation():
+  from genesis.mutator import Mutator
+  pos_examples = ["c1 -> or -> cost",
+                  "b1 -> or -> benefit",
+                  ]
+  neg_examples = ["c1 -> and -> b1",
+                  "c1 -> or -> b1"]
+  other_nodes = {"c2", "nb"}
+  other_edges = {"and"}
+  vocab = Vocabulary(other_nodes, other_edges)
+  pos_examples = map(Statement.from_string, pos_examples)
+  neg_examples = map(Statement.from_string, neg_examples)
+  model = Model(vocab, pos_examples, neg_examples)
+  pop = model.populate(100)
+  mutator = Mutator(model)
+  model.draw(mutator.cross_over(pop[0], pop[1]), "genesis/temp_cross_over.png")
+  model.draw(pop[0], "genesis/temp_parent0.png")
+  model.draw(pop[1], "genesis/temp_parent1.png")
+
+
 # TODO 1: Check optimization
 # TODO 2: Check best query generation
 
 
 if __name__ == "__main__":
-  test_nsga()
+  # test_check_mutation()
+  # test_basic()
+  test_check_mutation()
