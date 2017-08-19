@@ -189,7 +189,7 @@ class QueryEngine(O):
     spaces = spaces.difference(self.model.positives).difference(self.model.negatives)
     return spaces
 
-  def top_queries(self, population):
+  def top_queries(self, population, size=None):
     spaces = list(self.query_space(population))
     space_sets = []
     for space in spaces:
@@ -199,10 +199,11 @@ class QueryEngine(O):
           pos += 1
         else:
           neg += 1
-      space_sets.append((space, abs(pos-neg)))
-    return sorted(space_sets, key=lambda x: x[1])
-
-
+      space_sets.append((space, abs(pos - neg)))
+    space_sets = sorted(space_sets, key=lambda x: x[1])
+    if size is None:
+      size = len(population)
+    return [query for query, _ in space_sets][:size]
 
 
 
@@ -246,9 +247,18 @@ def test_nsga():
   model.draw(pop[-1].decisions, "genesis/temp_last.png")
 
 
-def test_check_queries():
+def test_check_genesis():
   from genesis.mutator import Mutator
   from technix import nsga
+  from genesis.oracle import StatementOracle
+  oracle = StatementOracle([
+      "c1 -> or -> cost",
+      "c2 -> or -> cost",
+      "b1 -> or -> benefit",
+      "b2 -> or -> benefit",
+      "cost -> and -> nb",
+      "benefit -> and -> nb"
+  ])
   pos_examples = ["c1 -> or -> cost",
                   "b1 -> or -> benefit",
                   ]
@@ -260,12 +270,18 @@ def test_check_queries():
   pos_examples = map(Statement.from_string, pos_examples)
   neg_examples = map(Statement.from_string, neg_examples)
   model = Model(vocab, pos_examples, neg_examples)
-  pop = model.populate(10)
+  repeats = 10
+  pop = None
   mutator = Mutator(model)
-  pop = nsga.nsga2(model, mutator, pop, iterations=10)
   qe = QueryEngine(model)
-  spaces = qe.top_queries(pop)
-  print(spaces)
+  for _ in xrange(repeats):
+    pop = model.populate(10)
+    pop = nsga.nsga2(model, mutator, pop, iterations=10)
+    top_query = qe.top_queries(pop)[0]
+    status = oracle.validate(top_query)
+    print(top_query, status)
+    model.add_examples([top_query], status)
+  model.draw(pop[0].decisions, "genesis/improved_best.png")
 
 
 # TODO 1: Check optimization
@@ -275,4 +291,4 @@ def test_check_queries():
 if __name__ == "__main__":
   # test_basic()
   # test_check_mutation()
-  test_check_queries()
+  test_check_genesis()
