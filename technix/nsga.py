@@ -4,6 +4,7 @@ import os
 sys.path.append(os.path.abspath("."))
 sys.dont_write_bytecode = True
 import random
+from utils.lib import say
 
 __author__ = "bigfatnoob"
 
@@ -15,7 +16,24 @@ def loo(points):
     yield one, rest
 
 
+def nsga2(model, mutator, population, tournament_size=4, iterations=100):
+  k = len(population)
+  [one.evaluate(model) for one in population]
+  for _ in range(iterations):
+    say(".")
+    population = evolve(model, mutator, population, tournament_size)
+    population = select(model, population, k)
+  return population
+
+
 def select(model, population, k):
+  """
+  Select top k points from population.
+  :param model: Instance of model
+  :param population: List of points
+  :param k: Number of points to select
+  :return: Top k points
+  """
   if len(population) < k:
     return population
   [point.evaluate(model) for point in population]
@@ -31,9 +49,44 @@ def select(model, population, k):
   return pop_next
 
 
-def evolve(model, population, is_domination=True):
-  # TODO: Use crossover and mutation
-  pass
+def evolve(model, mutator, population, tournament_size=4):
+  """
+  Performs crossover and mutation and doubles population size
+  :param model: Instance of Model
+  :param mutator: Instance of Mutator
+  :param population: List of points
+  :param tournament_size: Size of tournament
+  :return: List of population + List of mutants
+  """
+  kids = []
+  clones = [one.clone() for one in population]
+  for _ in xrange(len(clones)):
+    mom = binary_tournament_selection(model, population, tournament_size)
+    while True:
+      dad = binary_tournament_selection(model, population, tournament_size)
+      if not mom == dad: break
+    kid = mutator.cross_over(mom, dad)
+    kid = mutator.mutate(kid, population)
+    kids.append(kid)
+  return clones + kids
+
+
+def binary_tournament_selection(model, population, size):
+  """
+  Select individual from the population of size
+  tourn_size based on tournament evaluation
+  :param model: Model used for evaluation
+  :param population: Population to sample from
+  :param size: Size of tournament
+  :return: Most dominant individual from the tournament
+  """
+  tournament = random.sample(population, size)
+  best = tournament[0]
+  for i in range(1, len(tournament)):
+    if model.better(tournament[i], best) == 1:
+      best = tournament[i]
+  return best
+
 
 def sort_non_dominated(model, population):
   frontiers = []

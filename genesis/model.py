@@ -49,7 +49,7 @@ class Model(O):
       return False
 
   @staticmethod
-  def _check_edge_consistency(graph):
+  def check_edge_consistency(graph):
     nodes = graph.nodes()
     for node in nodes:
       in_edges = graph.in_edges([node], data=True)
@@ -67,7 +67,7 @@ class Model(O):
     for neg in self.negatives:
       edge = graph.get_edge_data(neg.source, neg.target)
       if edge and edge['relation'] == neg.relation:
-        self.draw(GraphPoint(graph))
+        self.draw(graph)
         return False
     return True
 
@@ -102,7 +102,7 @@ class Model(O):
     :param solution: Instance of graph
     :return:
     """
-    return self._check_edge_consistency(solution) and self._check_edge_consistency(solution) and not \
+    return self.check_edge_consistency(solution) and self._check_edges_validity(solution) and not \
         self.cycle_exists(solution), 0
 
   def generate(self):
@@ -117,7 +117,7 @@ class Model(O):
     existing = set(list(self.positives) + list(self.negatives))
     while not nx.is_weakly_connected(graph):
       graph, existing = self._create_edge(graph, existing)
-    return GraphPoint(graph)
+    return GraphPoint(graph, existing)
 
   def populate(self, size):
     """
@@ -163,14 +163,47 @@ class Model(O):
       return 2
     return 0
 
-  def draw(self, point, fig_name="genesis/temp.png"):
+  def draw(self, graph, fig_name="genesis/temp.png"):
     dot_graph = dot.Dot(graph_type='digraph', rankdir="BT")
     for node in self.vocabulary.nodes:
       dot_graph.add_node(dot.Node(name=node))
-    for edge in point.decisions.edges(data=True):
+    for edge in graph.edges(data=True):
       style = 'dashed' if edge[2]['relation'] == 'or' else 'solid'
       dot_graph.add_edge(dot.Edge(edge[0], edge[1], style=style))
     dot_graph.write(fig_name, format='png')
+
+
+class QueryEngine(O):
+  def __init__(self, model):
+    O.__init__(self)
+    self.model = model
+
+  def query_space(self, population):
+    """
+    :param population: List of instance of GraphPoints
+    :return: collection of statements which are the search spaces
+    """
+    spaces = set()
+    for point in population:
+      spaces.update(point.statements)
+    spaces = spaces.difference(self.model.positives).difference(self.model.negatives)
+    return spaces
+
+  def top_queries(self, population):
+    spaces = list(self.query_space(population))
+    space_sets = []
+    for space in spaces:
+      pos, neg = 0, 0
+      for point in population:
+        if space in point.statements:
+          pos += 1
+        else:
+          neg += 1
+      space_sets.append((space, abs(pos-neg)))
+    return sorted(space_sets, key=lambda x: x[1])
+
+
+
 
 
 def test_basic():
@@ -187,31 +220,12 @@ def test_basic():
   model = Model(vocab, pos_examples, neg_examples)
   pop = model.populate(5)
   print([p.evaluate(model) for p in pop])
-  model.draw(pop[0], "genesis/temp0.png")
-  model.draw(pop[4], "genesis/temp4.png")
+  model.draw(pop[0].decisions, "genesis/temp0.png")
+  model.draw(pop[4].decisions, "genesis/temp4.png")
 
 
 def test_nsga():
   from technix import nsga
-  pos_examples = ["c1 -> or -> cost",
-                  "b1 -> or -> benefit",
-                  ]
-  neg_examples = ["c1 -> and -> b1",
-                  "c1 -> or -> b1"]
-  other_nodes = {"c2", "nb"}
-  other_edges = {"and"}
-  vocab = Vocabulary(other_nodes, other_edges)
-  pos_examples = map(Statement.from_string, pos_examples)
-  neg_examples = map(Statement.from_string, neg_examples)
-  model = Model(vocab, pos_examples, neg_examples)
-  pop = model.populate(100)
-  # print([p.evaluate(model) for p in pop])
-  pop = nsga.select(model, pop, len(pop))
-  model.draw(pop[0], "genesis/temp_best.png")
-  model.draw(pop[-1], "genesis/temp_last.png")
-
-
-def test_check_mutation():
   from genesis.mutator import Mutator
   pos_examples = ["c1 -> or -> cost",
                   "b1 -> or -> benefit",
@@ -224,11 +238,34 @@ def test_check_mutation():
   pos_examples = map(Statement.from_string, pos_examples)
   neg_examples = map(Statement.from_string, neg_examples)
   model = Model(vocab, pos_examples, neg_examples)
-  pop = model.populate(100)
+  pop = model.populate(10)
+  # print([p.evaluate(model) for p in pop])
   mutator = Mutator(model)
-  model.draw(mutator.cross_over(pop[0], pop[1]), "genesis/temp_cross_over.png")
-  model.draw(pop[0], "genesis/temp_parent0.png")
-  model.draw(pop[1], "genesis/temp_parent1.png")
+  pop = nsga.nsga2(model, mutator, pop, iterations=10)
+  model.draw(pop[0].decisions, "genesis/temp_best.png")
+  model.draw(pop[-1].decisions, "genesis/temp_last.png")
+
+
+def test_check_queries():
+  from genesis.mutator import Mutator
+  from technix import nsga
+  pos_examples = ["c1 -> or -> cost",
+                  "b1 -> or -> benefit",
+                  ]
+  neg_examples = ["c1 -> and -> b1",
+                  "c1 -> or -> b1"]
+  other_nodes = {"c2", "nb"}
+  other_edges = {"and"}
+  vocab = Vocabulary(other_nodes, other_edges)
+  pos_examples = map(Statement.from_string, pos_examples)
+  neg_examples = map(Statement.from_string, neg_examples)
+  model = Model(vocab, pos_examples, neg_examples)
+  pop = model.populate(10)
+  mutator = Mutator(model)
+  pop = nsga.nsga2(model, mutator, pop, iterations=10)
+  qe = QueryEngine(model)
+  spaces = qe.top_queries(pop)
+  print(spaces)
 
 
 # TODO 1: Check optimization
@@ -236,6 +273,6 @@ def test_check_mutation():
 
 
 if __name__ == "__main__":
-  # test_check_mutation()
   # test_basic()
-  test_check_mutation()
+  # test_check_mutation()
+  test_check_queries()

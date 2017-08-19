@@ -20,7 +20,8 @@ def default():
   """
   return O(
     cross_rate=1.0,
-    cross_prob=0.4
+    cross_prob=0.4,
+    mutation_policy="nothing"  # nothing / random
   )
 
 
@@ -30,6 +31,14 @@ class Mutator(O):
     self.settings = default().update(**settings)
     O.__init__(self)
 
+  def mutate(self, point, population):
+    if self.settings.mutation_policy == "nothing":
+      return self.mutate_do_nothing(point, population)
+    elif self.settings.mutation_policy == "random":
+      return self.mutate_random(point, population)
+    else:
+      raise Exception("Invalid mutation policy : %s" % self.settings.mutation_policy)
+
   def mutate_random(self, point, population):
     """
     Just another random point
@@ -37,10 +46,10 @@ class Mutator(O):
     :param population:
     :return:
     """
-    other = GraphPoint(self.model.generate())
+    other = self.model.generate()
     other.evaluate(self.model)
     while other in population or other == point:
-      other = GraphPoint(self.model.generate())
+      other = self.model.generate()
       other.evaluate(self.model)
     return other
 
@@ -74,7 +83,7 @@ class Mutator(O):
           in_edges = graph.in_edges([target], data=True)
           if in_edges:
             relations = set([edge[2]['relation'] for edge in in_edges])
-            assert len(relations) == 1, "Multiple incoming relations to node %s" % target
+            assert len(relations) == 1, in_edges
             relation = choice(relations)
           else:
             relation = choice(model.vocabulary.edges)
@@ -87,11 +96,11 @@ class Mutator(O):
           else:
             stmt = Statement(source, relation, target)
       graph.add_edge(stmt.source, stmt.target, relation=stmt.relation)
-      if not model.cycle_exists(graph):
+      if not model.cycle_exists(graph) and model.check_edge_consistency(graph):
         existing.add(stmt)
       else:
         graph.remove_edge(stmt.source, stmt.target)
-    return GraphPoint(graph)
+    return GraphPoint(graph, existing)
 
   @staticmethod
   def mutate_do_nothing(point, population):

@@ -91,7 +91,7 @@ class Vocabulary(O):
 
 
 class GraphPoint(O):
-  def __init__(self, graph):
+  def __init__(self, graph, statements):
     """
     Point used for modelling. More so an instance of model.
     Decisions are graph and objectives can be set
@@ -99,6 +99,7 @@ class GraphPoint(O):
     """
     O.__init__(self)
     self.decisions = graph
+    self.statements = statements
     self.objectives = None
     # Attributes for NSGA2
     self.dominating = 0
@@ -116,6 +117,12 @@ class GraphPoint(O):
   def __hash__(self):
     return hash(self.decisions)
 
+  def __eq__(self, other):
+    if other is None:
+      return False
+    diff = nx.difference(self.decisions, other.decisions)
+    return len(diff.edges()) == 0
+
   def evaluate(self, model):
     try:
       if not self.objectives:
@@ -123,8 +130,8 @@ class GraphPoint(O):
       return self.objectives
     except nx.NetworkXException as e:
       print("EXCEPTION : \n%s" % e)
-      model.draw(self)
+      model.draw(self.decisions)
       exit()
 
   def clone(self):
-    return GraphPoint(self.decisions.copy())
+    return GraphPoint(self.decisions.copy(), set(list(self.statements)[:]))

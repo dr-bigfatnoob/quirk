@@ -139,3 +139,13 @@ def save_file(obj, file_name):
   mkdir(directory)
   with open(file_name, "wb") as f:
     f.write(obj)
+
+
+def say(*lst):
+  """
+  Print on the same line
+  :param lst:
+  :return:
+  """
+  print(*lst, end="")
+  sys.stdout.flush()
