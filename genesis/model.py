@@ -284,8 +284,7 @@ def test_check_genesis():
   model.draw(pop[0].decisions, "genesis/improved_best.png")
 
 
-# TODO 1: Check optimization
-# TODO 2: Check best query generation
+# TODO: Code up conversion from quirk to and or graphs
 
 
 if __name__ == "__main__":
